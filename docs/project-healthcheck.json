@@ -1,0 +1,157 @@
+{
+  "checked_at_utc": "2026-10-09T03:55:15.122271+00:00",
+  "official_project_location": "C:\\Users\\yazan\\Development\\binance-demo-bot",
+  "env_file_exists": true,
+  "effective_environment": "demo",
+  "five_skills_present_and_validated": true,
+  "automated_tests": {
+    "total": 28,
+    "passed": 28,
+    "failed": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "orders_requested": false,
+  "production_endpoints_used": false,
+  "credential_values_recorded": false,
+  "phase_2_started": false,
+  "runtime_source_changed": false,
+  "market_data": {
+    "BTCUSDT": {
+      "candles": {
+        "5m": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "15m": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "1h": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "4h": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        }
+      },
+      "funding": {
+        "status": "PASS",
+        "records": 3
+      },
+      "open_interest": {
+        "status": "PASS",
+        "current_snapshot_only": true
+      }
+    },
+    "ETHUSDT": {
+      "candles": {
+        "5m": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "15m": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "1h": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        },
+        "4h": {
+          "status": "PASS",
+          "validated_closed_candles": 9
+        }
+      },
+      "funding": {
+        "status": "PASS",
+        "records": 3
+      },
+      "open_interest": {
+        "status": "PASS",
+        "current_snapshot_only": true
+      }
+    }
+  },
+  "public_connectivity": {
+    "status": "PASS",
+    "checks": [
+      "ping",
+      "server_time",
+      "exchange_info"
+    ]
+  },
+  "account_balance": {
+    "status": "PASS",
+    "usdt_balance_and_available_balance_validated": true,
+    "balance_values_recorded": false
+  },
+  "network_requests": [
+    {
+      "method": "GET",
+      "path": "/fapi/v1/ping"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/time"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/exchangeInfo"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v3/balance"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/fundingRate"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/openInterest"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/klines"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/fundingRate"
+    },
+    {
+      "method": "GET",
+      "path": "/fapi/v1/openInterest"
+    }
+  ],
+  "overall": "PASS"
+}

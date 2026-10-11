@@ -1,0 +1,3 @@
+interface:
+  display_name: "Quant Backtesting"
+  short_description: "Build causal, cost-aware offline strategy evidence"

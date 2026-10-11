@@ -1,0 +1,3 @@
+interface:
+  display_name: "Binance Demo API"
+  short_description: "Review Demo endpoints, signing, and market data"

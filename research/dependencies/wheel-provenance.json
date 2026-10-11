@@ -1,0 +1,51 @@
+[
+  {
+    "name": "scikit-learn",
+    "version": "1.9.1",
+    "wheel": "scikit_learn-1.9.1-cp312-cp312-win_amd64.whl",
+    "sha256": "4b59abb30618121cc46b45972d6bf53a7128b4df4cd346c6ca6f4d5f9031e49c",
+    "url": "https://files.pythonhosted.org/packages/72/8d/27c054166bac671770d1ea0ef7716134fe8119c0df224a58c89fd735a61c/scikit_learn-1.9.1-cp312-cp312-win_amd64.whl"
+  },
+  {
+    "name": "numpy",
+    "version": "2.5.3",
+    "wheel": "numpy-2.5.3-cp312-cp312-win_amd64.whl",
+    "sha256": "0a59a421a32580a009e8a1751345bf829631b990dc1794b80514ab722b435def",
+    "url": "https://files.pythonhosted.org/packages/3c/a1/accf6d4f0c80c5d9ba9735d6b1550e444180599f34dec69ca01360f717ad/numpy-2.5.3-cp312-cp312-win_amd64.whl"
+  },
+  {
+    "name": "scipy",
+    "version": "1.18.1",
+    "wheel": "scipy-1.18.1-cp312-cp312-win_amd64.whl",
+    "sha256": "5e4d44984abc0020154ea81b247adeddcc3ac5527b975ff798bd1ba0adc513c2",
+    "url": "https://files.pythonhosted.org/packages/39/e7/979fd14e75008623df31ba70d6bb144700f68feadcea042021c06a05bf82/scipy-1.18.1-cp312-cp312-win_amd64.whl"
+  },
+  {
+    "name": "joblib",
+    "version": "1.6.0",
+    "wheel": "joblib-1.6.0-py3-none-any.whl",
+    "sha256": "3dbbf9f6e4b592a2357b854608e980fe6390d131d7a82f011a377ef2ebef7aba",
+    "url": "https://files.pythonhosted.org/packages/18/53/84099323c2ec4be98d935f63c033ac4151ee83836ca1050ede3b3aadf155/joblib-1.6.0-py3-none-any.whl"
+  },
+  {
+    "name": "threadpoolctl",
+    "version": "3.7.0",
+    "wheel": "threadpoolctl-3.7.0-py3-none-any.whl",
+    "sha256": "cd8b60b5641b45c67bbf73c64c843235fc2d8a480c87389f52f5dbee893b86be",
+    "url": "https://files.pythonhosted.org/packages/43/3f/f88a53f60a472b46f4023f56d204dd7de33d34c5d2acbfa0d70a674e639e/threadpoolctl-3.7.0-py3-none-any.whl"
+  },
+  {
+    "name": "narwhals",
+    "version": "2.27.1",
+    "wheel": "narwhals-2.27.1-py3-none-any.whl",
+    "sha256": "d057df13f5852b8e157596e82eb5e955fad267425df5e420e0ee9863da483b31",
+    "url": "https://files.pythonhosted.org/packages/d1/89/5d4c86da1130d9059681e5b6cd7645df5c10279a6a079c5c37dcb2cc6f3f/narwhals-2.27.1-py3-none-any.whl"
+  },
+  {
+    "name": "cloudpickle",
+    "version": "3.1.2",
+    "wheel": "cloudpickle-3.1.2-py3-none-any.whl",
+    "sha256": "9acb47f6afd73f60dc1df93bb801b472f05ff42fa6c84167d25cb206be1fbf4a",
+    "url": "https://files.pythonhosted.org/packages/88/39/799be3f2f0f38cc727ee3b4f1445fe6d5e4133064ec2e4115069418a5bb6/cloudpickle-3.1.2-py3-none-any.whl"
+  }
+]

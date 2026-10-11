@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "binance-demo-bot"
+version = "0.2.0"
+description = "Demo-only Binance USD-M Futures diagnostics and offline historical research"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+demo-futures = "demo_futures.cli:main"
+demo-backtest = "demo_futures.backtest_cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

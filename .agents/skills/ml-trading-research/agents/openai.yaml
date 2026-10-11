@@ -1,0 +1,3 @@
+interface:
+  display_name: "ML Trading Research"
+  short_description: "Audit causal features and out-of-sample model gates"

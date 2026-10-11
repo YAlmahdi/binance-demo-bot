@@ -1,0 +1,33 @@
+.env
+.env.*
+!.env.example
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+data/
+logs/
+dist/
+build/
+
+# Local research wheel cache; retain pins and hashes.
+research/dependencies/wheels/
+# Futures AI Lab - local research evidence
+/artifacts/
+/manual-public-metadata/
+
+# Reports are excluded by default.
+# Safe, reviewed reports can be added explicitly later.
+/reports/
+
+# Additional sensitive data and generated outputs
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+*.db
+*.db-*
+*.pem
+*.key
+*.p12
+*.pfx
+*.log

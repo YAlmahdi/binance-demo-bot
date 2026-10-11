@@ -1,0 +1,3 @@
+interface:
+  display_name: "Futures Risk Manager"
+  short_description: "Review sizing, exposure limits, and emergency halts"

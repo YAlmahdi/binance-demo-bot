@@ -1,0 +1,132 @@
+{
+  "scikit-learn": {
+    "version": "1.9.1",
+    "requires_python": ">=3.11",
+    "requires_dist": [
+      "numpy>=1.24.1",
+      "scipy>=1.10.0",
+      "joblib>=1.4.0",
+      "narwhals>=2.0.1",
+      "threadpoolctl>=3.5.0"
+    ],
+    "source": "https://pypi.org/pypi/scikit-learn/json"
+  },
+  "numpy": {
+    "version": "2.5.3",
+    "requires_python": ">=3.12",
+    "requires_dist": null,
+    "source": "https://pypi.org/pypi/numpy/json"
+  },
+  "scipy": {
+    "version": "1.18.1",
+    "requires_python": ">=3.12",
+    "requires_dist": [
+      "numpy<2.8,>=2.0.0",
+      "pytest>=8.0.0; extra == \"test\"",
+      "pytest-cov; extra == \"test\"",
+      "pytest-timeout; extra == \"test\"",
+      "pytest-xdist; extra == \"test\"",
+      "asv; extra == \"test\"",
+      "mpmath; extra == \"test\"",
+      "gmpy2; extra == \"test\"",
+      "threadpoolctl; extra == \"test\"",
+      "scikit-umfpack; extra == \"test\"",
+      "pooch; extra == \"test\"",
+      "hypothesis>=6.30; extra == \"test\"",
+      "array-api-strict>=2.3.1; extra == \"test\"",
+      "Cython; extra == \"test\"",
+      "meson; extra == \"test\"",
+      "ninja; sys_platform != \"emscripten\" and extra == \"test\"",
+      "scipy-doctest>=2.0.0; extra == \"test\"",
+      "sphinx<8.2.0,>=5.0.0; extra == \"doc\"",
+      "intersphinx_registry; extra == \"doc\"",
+      "pydata-sphinx-theme>=0.15.2; extra == \"doc\"",
+      "sphinx-copybutton; extra == \"doc\"",
+      "sphinx-design>=0.4.0; extra == \"doc\"",
+      "matplotlib>=3.5; extra == \"doc\"",
+      "numpydoc; extra == \"doc\"",
+      "jupytext; extra == \"doc\"",
+      "myst-nb>=1.2.0; extra == \"doc\"",
+      "pooch; extra == \"doc\"",
+      "jupyterlite-sphinx>=0.19.1; extra == \"doc\"",
+      "jupyterlite-pyodide-kernel; extra == \"doc\"",
+      "linkify-it-py; extra == \"doc\"",
+      "tabulate; extra == \"doc\"",
+      "click<8.3.0; extra == \"dev\"",
+      "spin; extra == \"dev\"",
+      "mypy==1.19.1; extra == \"dev\"",
+      "pyrefly==0.63.0; extra == \"dev\"",
+      "typing_extensions; extra == \"dev\"",
+      "types-psutil; extra == \"dev\"",
+      "pycodestyle; extra == \"dev\"",
+      "ruff>=0.12.0; extra == \"dev\"",
+      "cython-lint>=0.12.2; extra == \"dev\""
+    ],
+    "source": "https://pypi.org/pypi/scipy/json"
+  },
+  "joblib": {
+    "version": "1.6.0",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "cloudpickle>=3.0",
+      "distributed; extra == \"test\"",
+      "lz4; extra == \"test\"",
+      "numpy; extra == \"test\"",
+      "memory_profiler; extra == \"test\"",
+      "pytest; extra == \"test\"",
+      "pytest-asyncio; extra == \"test\"",
+      "pytest-cov; extra == \"test\"",
+      "pytest-run-parallel; extra == \"test\"",
+      "pytest-timeout; extra == \"test\"",
+      "threadpoolctl; extra == \"test\"",
+      "distributed; extra == \"docs\"",
+      "lz4; extra == \"docs\"",
+      "numpy; extra == \"docs\"",
+      "numpydoc; extra == \"docs\"",
+      "matplotlib; extra == \"docs\"",
+      "pandas; extra == \"docs\"",
+      "psutil; extra == \"docs\"",
+      "sphinx; extra == \"docs\"",
+      "pydata-sphinx-theme; extra == \"docs\"",
+      "sphinx-gallery; extra == \"docs\"",
+      "sphinx-copybutton; extra == \"docs\"",
+      "sphinx-design; extra == \"docs\"",
+      "tqdm; extra == \"docs\""
+    ],
+    "source": "https://pypi.org/pypi/joblib/json"
+  },
+  "threadpoolctl": {
+    "version": "3.7.0",
+    "requires_python": ">=3.9",
+    "requires_dist": null,
+    "source": "https://pypi.org/pypi/threadpoolctl/json"
+  },
+  "narwhals": {
+    "version": "2.27.1",
+    "requires_python": ">=3.10",
+    "requires_dist": [
+      "cudf-cu12>=24.10.0; sys_platform == \"linux\" and extra == \"cudf\"",
+      "dask[dataframe]>=2024.8; extra == \"dask\"",
+      "duckdb>=1.1; extra == \"duckdb\"",
+      "ibis-framework>=6.0.0; extra == \"ibis\"",
+      "packaging>=21.3; extra == \"ibis\"",
+      "pyarrow-hotfix>=0.7; extra == \"ibis\"",
+      "modin>=0.22.0; extra == \"modin\"",
+      "pandas>=1.3.4; extra == \"pandas\"",
+      "polars>=0.20.4; extra == \"polars\"",
+      "pyarrow>=13.0.0; extra == \"pyarrow\"",
+      "pyspark>=3.5.0; extra == \"pyspark\"",
+      "pyspark[connect]>=3.5.0; extra == \"pyspark-connect\"",
+      "narwhals[duckdb]; extra == \"sql\"",
+      "sqlparse>=0.5.5; extra == \"sql\"",
+      "sqlframe!=3.39.3,>=3.22.0; extra == \"sqlframe\""
+    ],
+    "source": "https://pypi.org/pypi/narwhals/json"
+  },
+  "cloudpickle": {
+    "version": "3.1.2",
+    "requires_python": ">=3.8",
+    "requires_dist": null,
+    "source": "https://pypi.org/pypi/cloudpickle/json"
+  }
+}

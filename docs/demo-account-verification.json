@@ -1,0 +1,27 @@
+{
+  "checked_at_utc": "2026-10-09T03:07:43.066773+00:00",
+  "environment": "demo",
+  "rest_origin": "https://demo-fapi.binance.com",
+  "http_methods_used": [
+    "GET"
+  ],
+  "orders_requested": false,
+  "phase_2_started": false,
+  "credential_values_recorded": false,
+  "diagnostic_options": {
+    "exchange_info_timeout_seconds": 45,
+    "gzip_requested": true
+  },
+  "runtime_source_changed": false,
+  "prior_findings": "Ping/time and DNS passed; exchangeInfo timed out at normal timeout; authenticated balance not previously attempted.",
+  "public_connection": "PASS",
+  "status": "PASS",
+  "authenticated_balance": "PASS",
+  "usdt_balance_validated": true,
+  "completed_endpoints": [
+    "/fapi/v1/ping",
+    "/fapi/v1/time",
+    "/fapi/v1/exchangeInfo",
+    "/fapi/v3/balance"
+  ]
+}

@@ -1,0 +1,3 @@
+interface:
+  display_name: "Trading Code Review"
+  short_description: "Review trading changes without executing orders"
