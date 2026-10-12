@@ -127,7 +127,21 @@ F/C/A/Q remain PENDING. Expansion symbols remain inactive DATA ONLY.
 
 Evidence: `reports/research-v2/V2-CONTRACT-HARDENING-20261012T013325Z/report.md`.
 That directory is ignored and local only. The status and source/test/runner files
-also remain unpublished because fresh Git remote verification failed (DNS).
+were unpublished after the original DNS-blocked attempt; that historical failure
+is preserved in the local report and PROJECT_STATUS.md, not the current state.
+
+**Publication recovery — SUCCESS (2026-10-12):** eight previously approved V2
+milestone files were committed and pushed to PRIVATE `YAlmahdi/binance-demo-bot`,
+`origin/main`, in `d317e4c9bb107be50d9533f09e7705acbf4ccaee`. Independent remote
+verification confirmed the exact commit. The earlier `Could not resolve host:
+github.com` failure and BLOCKED status describe the original attempt only.
+Recovery verified file identities and reused the previous 113-pass synthetic test
+receipt without rerunning those tests. No unpublished recovery-task commit
+remains, as confirmed by that completed task. Ignored report/JSON evidence remains
+local; unrelated untracked files were excluded and left untouched. This is a
+documentation-only correction: Historical Loader remains NOT IMPLEMENTED /
+BLOCKED, financial readiness unresolved, and RISK NOT CLEARED. No new phase or
+research/data access is authorized.
 
 Only after separate approval, verification can be repeated with the bundled
 Python runtime and `-B scripts/verify_v2_contracts.py --report-directory` pointing
