@@ -12,6 +12,92 @@ Scope: this directory and its children. Use the latest verified `docs/PROJECT_ST
 - BTCUSDT and ETHUSDT are the only current V2 research symbols. SOLUSDT, BNBUSDT and XRPUSDT remain inactive DATA ONLY; their quality/funding review is **PENDING / BLOCKING BEFORE EXPANSION**. No automatic symbol promotion or research expansion.
 - Historical exploration is research-informed, not genuinely prospective confirmation. Preserve the distinct strict prospective reference and HYBRID design; actual F/C/A/Q dates remain PENDING and must not be backdated. No new fold calendar or research access is implied by Git synchronization.
 
+## Engineering, AI, Strategy & Performance — Balanced Project Priorities
+
+### Engineering and AI Development
+
+Prioritize, within explicitly approved tasks:
+
+- Maintainable, modular software architecture.
+- Correct implementation and deterministic behavior.
+- Meaningful automated testing and debugging.
+- Data infrastructure, preprocessing, provenance, and reproducibility.
+- AI/ML engineering, model interfaces, inference design, and reliability.
+- Observability, logging, error handling, automation, and security.
+- Clear technical milestones and evidence-based progress reports.
+
+Do not confuse an implemented interface, passing synthetic tests, successful model fitting, or Git publication with scientifically validated performance.
+
+### Strategy and Market Understanding
+
+When relevant to the authorized task or user request, explain:
+
+- The currently implemented trading strategy and decision rules.
+- The distinction between baseline indicators and proposed AI-driven strategies.
+- How features, indicators, and models influence LONG, SHORT, and NO TRADE decisions.
+- Whether a model is proposed, implemented, fitted, evaluated, or approved.
+- Available prediction accuracy, classification errors, calibration, and baseline comparisons.
+- Relevant market trends, volatility, and data-quality limitations.
+
+Use actual verified evidence. Do not invent market analysis, strategy outcomes, fitted models, or prediction results.
+
+Keep explanations accessible to an IT student without sacrificing technical correctness.
+
+### Economic Performance and Risk
+
+When valid, authorized results already exist, report relevant metrics such as:
+
+- Trade win rate and loss rate.
+- Prediction accuracy and prediction error.
+- Net PnL and net return after trading costs.
+- Profit factor and maximum drawdown.
+- Fees, slippage, funding costs, and risk-budget breaches.
+- Performance relative to cash, baseline strategies, and simple predictive alternatives.
+- Relevant sample sizes, research periods, uncertainty, and limitations.
+
+Explicitly distinguish:
+
+1. Engineering correctness.
+2. AI predictive performance.
+3. Economic profitability.
+4. Trading and operational safety.
+
+Prediction accuracy is not trade win rate, and neither guarantees profitability.
+
+Successful tests, good accuracy, or favorable historical results do not establish future profitability or complete trading safety.
+
+### Reporting Priorities
+
+For routine engineering and Codex task reports:
+
+1. Explain what was actually implemented or changed.
+2. Summarize relevant verification and test evidence.
+3. Explain the current strategy or AI behavior when relevant.
+4. Present verified prediction and financial metrics only when available and applicable.
+5. Identify technical, scientific, economic, and safety blockers separately.
+6. Recommend exactly ONE logical next step requiring user approval.
+
+Use concise, practical language rather than unnecessarily extensive market-research explanations.
+
+Do not omit material financial or scientific risks merely to make reports shorter.
+
+Unresolved financial-research questions must not automatically block unrelated, separately approved, safe engineering tasks. However, they must continue blocking dependent financial claims, research advancement, strategy promotion, and trading clearance.
+
+### Non-Negotiable Safety and Approval Boundaries
+
+This balanced development emphasis does NOT:
+
+- Authorize new data collection, API requests, fitting, training, backtesting, predictions, or research evaluation.
+- Authorize historical-loader implementation or real-data research.
+- Authorize protected V1 period access.
+- Change the approved V2 research symbols or expand research scope.
+- Authorize Demo order execution, production endpoints, or live trading.
+- Relax funding completeness, causality, provenance, research validation, or risk requirements.
+- Modify existing strategy, trading-cost, position-sizing, or risk parameters.
+- Grant Git publication permission for protected policy files.
+
+Preserve `RISK NOT CLEARED` and all existing repository safety and scientific restrictions.
+
 Use the relevant project skill rather than all five for every task:
 
 | Task | Skill file |
@@ -35,6 +121,53 @@ After every completed, failed, blocked, stopped, partial, or documentation-only 
 5. Clearly distinguish implemented, tested, proposed, and unimplemented features.
 6. Preserve all existing safety and approval restrictions.
 7. Never include API keys, secrets, credentials, or sensitive account data in reports.
+
+### CHANGED FILES & PUBLICATION STATUS
+
+Include this per-file table in every substantive final task report, before the final **GITHUB SYNC STATUS** section:
+
+| File Path | Change Type | Local Status | GitHub Status |
+|---|---|---|---|
+| Exact project-relative path | CREATED / MODIFIED / DELETED / RENAMED | COMMITTED / UNCOMMITTED / IGNORED / NOT APPLICABLE | PUSHED / LOCAL ONLY / FAILED / BLOCKED / NOT APPLICABLE |
+
+The example row defines the schema, not actual task results. Use one applicable value in each status column; explain any uncertainty or exclusion in the surrounding report.
+
+**Change Type meanings:** CREATED means a new file created by this task; MODIFIED means an existing file changed by this task; DELETED means a file removed by this task; RENAMED means a task-related rename, identifying both the previous and new exact paths. These labels report actions already authorized and performed, not permission to perform them.
+
+**Local Status meanings:**
+
+- COMMITTED: the reported task-related change is included in an actual local commit. This does not imply remote publication; identify an unpublished commit when applicable.
+- UNCOMMITTED: the task-related change has not been committed, whether unstaged or staged. An older committed version of the file does not change this classification.
+- IGNORED: the task-created/changed untracked file is excluded from normal staging by effective ignore rules and remains local. Ignore patterns do not untrack an already tracked file; report its current task change as COMMITTED or UNCOMMITTED instead.
+- NOT APPLICABLE: local Git status genuinely does not apply; explain why. Deletions and renames still normally have a COMMITTED or UNCOMMITTED change, even when the old path no longer exists.
+
+**GitHub Status meanings:**
+
+- PUSHED: the task-related change is included in a commit whose publication to the authorized remote main has been independently confirmed under the existing policy.
+- LOCAL ONLY: the current task-related change remains local without confirmed publication, including an intentionally skipped synchronization. Distinguish this from an actually failed push or a required gate that blocked publication.
+- FAILED: a push was attempted and failed for the affected task-committed change. Disclose any uncertainty about remote acceptance after a transport error; do not invent confirmation or absence.
+- BLOCKED: a required authorization, security, verification, repository or remote-state gate prevented publication or its confirmation. State the precise reason.
+- NOT APPLICABLE: the file is deliberately outside the applicable GitHub publication scope; explain the exclusion. Do not use this to conceal a failed or blocked publication attempt.
+
+**Reporting rules:**
+
+1. List every file actually created, modified, deleted or renamed by the current task.
+2. Use exact project-relative paths, not only directory names or aggregate counts, subject to the security redaction rule below.
+3. Do not list merely inspected files as changed.
+4. For renames, identify both previous and new paths, and keep counting consistent with the actual task commit and existing policy.
+5. Distinguish uncommitted modifications, ignored local files and committed but unpublished changes.
+6. Mark PUSHED only after independent confirmation that the task-related change was published to the authorized remote main.
+7. A previously published version does not mean the file's current local modifications were pushed.
+8. Mark affected task-committed changes FAILED when an attempted push fails; use BLOCKED when a required gate prevents publication or confirmation.
+9. When synchronization is intentionally skipped, distinguish LOCAL ONLY files from files for which publication is NOT APPLICABLE, explaining exclusions.
+10. Never infer PUSHED from a local commit, staged files, cached remote references or an attempted push.
+11. Include relevant task-created ignored reports when their paths are safe to disclose, even when automatic publication is not authorized. Their reporting does not authorize force-adding or publishing them.
+12. Never disclose secret-bearing paths, credentials, private account details or sensitive content. Existing security restrictions take precedence over exact-path reporting; use safe redaction when necessary.
+13. If no files changed, state **No files changed** rather than inventing table entries.
+14. Ensure the per-file entries agree with the actual Files committed and Files pushed counts in GITHUB SYNC STATUS. Count this task's changes using the existing commit-path rules, not unrelated changes or merely inspected files.
+15. Never count unrelated pre-existing modifications or unpublished commits as changes created by the current task. Report relevant pre-existing conditions separately without adding them to this task's per-file change table.
+
+This subsection changes reporting only. It grants no new staging, commit, push, protected-file publication, research or operational authorization. Preserve the existing GITHUB SYNC STATUS table, exact fields, allowed statuses and final-section ordering. Do not create a second synchronization summary. GITHUB SYNC STATUS must remain the last section, with no text afterward.
 
 ### ChatGPT review availability and local evidence
 
