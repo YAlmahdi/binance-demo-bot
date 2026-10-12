@@ -220,3 +220,5 @@ Reviewed October 9, 2026:
 - [Account](https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/account)
 - [Trade: test order and open orders](https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/trade)
 - [OpenAI: skills](https://learn.chatgpt.com/docs/build-skills)
+
+GitHub synchronization verification: Documentation changes can be reviewed through the private GitHub repository after a confirmed successful push.
