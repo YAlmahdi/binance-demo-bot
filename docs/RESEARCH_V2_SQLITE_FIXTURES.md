@@ -12,7 +12,9 @@ rows, dataset, SQL handle, feature values, financial labels, fitted object or
 permission to perform another operation. Implicit truth testing is refused.
 
 Test provisioning uses `temporary_fixture()` to create an empty file inside a
-fresh system temporary directory. The active owner token must be the exact
+fresh system temporary directory with an explicit, identity-bound lifecycle.
+There is no `TemporaryDirectory` finalizer, recursive deletion, permission reset,
+retry or existing-directory adoption. The active owner token must be the exact
 process-minted object, the file must be sealed, and filesystem identity must
 match. There is no public existing-path adoption or database discovery interface.
 Fixture creation is separate from read validation; successful diagnostics cannot
@@ -62,10 +64,10 @@ assembly, financial labels, training or execution.
 
 ## Verification and limits
 
-`tests/test_v2_sqlite_fixtures.py` contains 29 focused tests. The guarded
+The original `tests/test_v2_sqlite_fixtures.py` contained 29 focused tests. The guarded
 `scripts/verify_v2_sqlite_fixtures.py` also selects 111 existing offline
 boundary/contract/configuration/feature/safety/indicator regressions. Final run:
-**140 passed; 0 failures, errors or skips**. All 36 directories created by that
+**Historical initial milestone: 140 passed; 0 failures, errors or skips**. All 36 directories created by that
 run were removed. The initial sandbox run had 111 passes and 29 temporary-file
 permission errors before any SQLite connection. Its empty-directory cleanup also
 failed; later removal of those first-run directories has not been verified.
@@ -85,6 +87,52 @@ against a hostile concurrent filesystem swap. Python-private helpers, frozen
 dataclasses and process registries are contracts, not an OS security sandbox.
 Actual historical schemas, real funding completeness, original receipts,
 liquidity/fills, scientific validity and financial performance are untested.
+
+## Lifecycle remediation — 2026-10-13
+
+**IMPLEMENTED / TESTED within the ordinary sandbox:** configured temporary-root
+metadata is read without `tempfile.gettempdir()` write probes or fallback to
+another environment. A fresh UUID name is attempted once. Windows uses ordinary
+directory creation to inherit the parent sandbox access; no ACL is edited.
+POSIX retains private creation mode. This is compatibility evidence for the
+tested environment, not proof of every Windows ACL configuration or the exact
+cause of older failures.
+
+Leases are revoked before cleanup, including incomplete creation. Seal, audited
+connection and reader failures expire access; known identity uncertainty also
+blocks cleanup. Teardown accepts only the recorded exact fixture file and root,
+checks identities, refuses unexpected entries and uses unlink/rmdir only.
+If ownership cannot be established, paths are retained and failure is reported.
+No finalizer later overrides that refusal. Ordinary immutable request/hash
+rejections retain their prior validation behavior.
+
+Primary and cleanup exceptions are preserved as separate members of an ordered
+exception group when both occur; a sole failure remains the original exception.
+Read/close diagnostic groups contain only safe category names, never exception
+messages or handles. KeyboardInterrupt/SystemExit groups propagate after cleanup
+instead of becoming successful or ordinary validation results.
+
+One bounded creation/seal/removal preflight passed: one real new fixture root
+removed, zero active leases and zero SQL connections. Both subsequent selected
+runs passed **161/161**, zero failures/errors/skips: 50 fixture tests (21 newly
+added) and 111 unchanged regressions. The second run followed addition of final
+global lease-count evidence, not a failure or permission retry. Each suite made
+37 real root-creation attempts and 11 virtual audit registrations; all real roots
+were removed. Final active leases: zero. Controlled virtual permission/link/
+identity tests create no actual filesystem paths. Earlier leftovers remain
+untouched and their cleanup remains unverified.
+
+Evidence: `reports/research-v2/V2-SQLITE-REMEDIATION-20261012T232509Z/report.md`
+and matching preflight/test receipts. Source hashes cover allowed code only.
+No real database, protected outcome, historical data or financial research was
+accessed. Existing scoped SQL, read-only defenses, provenance, protected periods,
+funding/causality rules and diagnostics-only authority remain unchanged.
+
+Known limitations remain: mocked links do not certify real OS link handling;
+pre/post identity checks cannot eliminate hostile concurrent swaps; row-level
+SQLite predicates do not prove physical-page isolation. Parent ACL inheritance
+is not a new confidentiality guarantee against other host processes. Historical
+Loader readiness, five adverse reserve findings and RISK NOT CLEARED unchanged.
 
 ## Proposed, unresolved and blocked
 

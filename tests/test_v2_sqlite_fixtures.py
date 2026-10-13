@@ -1,5 +1,5 @@
 """New temporary SQLite fixtures with invented records only; never repository DBs."""
-from contextlib import closing
+from contextlib import closing, contextmanager, ExitStack, nullcontext
 from dataclasses import asdict, astuple, FrozenInstanceError, fields, is_dataclass, replace
 import hashlib
 from pathlib import Path
@@ -7,7 +7,8 @@ import sqlite3
 import stat
 from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+import uuid
 
 from test_v2_loader_boundary import request as boundary_request, contexts, evidence
 from demo_futures.data import Candle
@@ -16,10 +17,12 @@ from demo_futures.research_v2.contracts import Readiness, result
 from demo_futures.research_v2.features import ObservedCandle, SyntheticSeries
 from demo_futures.research_v2.source_contracts import AvailabilityMode, OriginalAvailability, PROJECTION, TARGET_START, TARGET_END
 from demo_futures.research_v2.sqlite_fixture_contract import (
-    ACCESS_PROJECTION, FIXTURE_SCHEMA, MAX_ROWS, AccessDiagnostics, FixtureToken,
+    ACCESS_PROJECTION, FIXTURE_SCHEMA, MAX_ROWS, AccessDiagnostics, FixtureOwner, FixtureToken,
     FixtureSnapshot, SQLiteFixtureRequest, inspect_fixture, temporary_fixture,
     _FIXTURES, _QueryGate, _Refused, _json, _provenance, _reader, _rows_digest,
+    _audited_connection, _check_path, _cleanup_fixture, _revoke, _temporary_base,
 )
+import demo_futures.research_v2.sqlite_fixture_contract as contract
 
 
 def scope(**changes):
@@ -51,6 +54,105 @@ def fixture(owner, request_scope=None, *, transform=None, decoys=(), alter_schem
         connection.commit()
     owner.seal()
     return SQLiteFixtureRequest(request_scope, owner.token, snapshot, sources), rows
+
+
+class VirtualFixtureFilesystem:
+    """Controlled failure metadata only: none of these paths is created or opened."""
+    def __init__(self):
+        self.base = _temporary_base()  # Read-only current-root metadata, no write probe.
+        self.token = FixtureToken(uuid.uuid4().hex)
+        self.root = self.base / ('v2_sqlite_contract_' + self.token.fixture_id)
+        self.path = self.root / 'fixture.sqlite'
+        self.created = self.file_created = False
+        self.mkdir_error = self.open_error = self.unlink_error = self.rmdir_error = None
+        self.root_capture_error = self.file_capture_error = None
+        self.extra_entries = ()
+        self.operations = []
+        self.root_info = SimpleNamespace(st_dev=7, st_ino=101, st_mode=stat.S_IFDIR,
+                                         st_nlink=1, st_file_attributes=0)
+        self.file_info = SimpleNamespace(st_dev=7, st_ino=103, st_mode=stat.S_IFREG,
+                                         st_nlink=1, st_file_attributes=0)
+        self.original_resolve = Path.resolve
+
+    def mkdir(self, path, *args, **kwargs):
+        assert path == self.root, 'Unexpected virtual mkdir target'
+        self.operations.append('mkdir')
+        if self.mkdir_error is not None: raise self.mkdir_error
+        self.created = True
+
+    def open(self, path, mode='r', *args, **kwargs):
+        assert path == self.path and mode == 'xb', 'Unexpected virtual open target'
+        self.operations.append('open')
+        if self.open_error is not None: raise self.open_error
+        self.file_created = True
+        return nullcontext()
+
+    def lstat(self, path, *args, **kwargs):
+        if path == self.root:
+            if self.root_capture_error is not None: raise self.root_capture_error
+            if not self.created: raise FileNotFoundError('Invented root absent')
+            return self.root_info
+        assert path == self.path, 'Unexpected virtual metadata target'
+        if self.file_capture_error is not None: raise self.file_capture_error
+        if not self.file_created: raise FileNotFoundError('Invented fixture absent')
+        return self.file_info
+
+    def resolve(self, path, *args, **kwargs):
+        if path in (self.root, self.path): return path
+        return self.original_resolve(path, *args, **kwargs)
+
+    def iterdir(self, path):
+        assert path == self.root, 'Unexpected virtual enumeration target'
+        return iter(((self.path,) if self.file_created else ()) + self.extra_entries)
+
+    def unlink(self, path, *args, **kwargs):
+        assert path == self.path, 'Unexpected virtual unlink target'
+        self.operations.append('unlink')
+        if self.unlink_error is not None: raise self.unlink_error
+        self.file_created = False
+
+    def rmdir(self, path, *args, **kwargs):
+        assert path == self.root, 'Unexpected virtual rmdir target'
+        self.operations.append('rmdir')
+        if self.rmdir_error is not None: raise self.rmdir_error
+        assert not self.file_created and not self.extra_entries, 'Nonempty virtual root'
+        self.created = False
+
+    @contextmanager
+    def patched(self):
+        """Keep runtime audit registration enabled; patch only invented FS calls."""
+        with ExitStack() as stack:
+            stack.enter_context(patch.object(contract, '_temporary_base', return_value=self.base))
+            stack.enter_context(patch.object(contract.uuid, 'uuid4', return_value=SimpleNamespace(hex=self.token.fixture_id)))
+            for method in ('mkdir', 'open', 'lstat', 'resolve', 'iterdir', 'unlink', 'rmdir'):
+                stack.enter_context(patch.object(Path, method, autospec=True, side_effect=getattr(self, method)))
+            yield self
+
+    @contextmanager
+    def registered(self):
+        """A virtual lease exercises guards without any SQLite or OS file access."""
+        self.created = self.file_created = True
+        lease = {'root': self.root, 'path': self.path, 'token': self.token,
+                 'root_key': (7, 101), 'file_key': (7, 103), 'sealed': True,
+                 'root_created': True, 'unsafe': False}
+        with self.patched():
+            _FIXTURES[self.token.fixture_id] = lease
+            try:
+                yield FixtureOwner(lease), lease
+            finally:
+                _revoke(lease)  # Virtual paths never require actual filesystem cleanup.
+
+
+def virtual_request(owner):
+    request_scope = scope()
+    sources, _, series = contexts(request_scope)
+    rows = [(s.symbol, '5m', i, *astuple(o.candle), o.available_at)
+            for s in series for i, o in enumerate(s.observations)]
+    sources = tuple(replace(m, scoped_hash=replace(m.scoped_hash, digest=_rows_digest(
+        request_scope, [r for r in rows if r[0] == m.symbol], PROJECTION))) for m in sources)
+    provenance = _provenance(request_scope, sources)
+    snapshot = FixtureSnapshot(hashlib.sha256(provenance.encode()).hexdigest(), _rows_digest(request_scope, rows))
+    return SQLiteFixtureRequest(request_scope, owner.token, snapshot, sources)
 
 
 class SQLiteFixtureTests(unittest.TestCase):
@@ -107,24 +209,31 @@ class SQLiteFixtureTests(unittest.TestCase):
                 self.assertEqual(inspect_fixture(req).reasons, ('FIXTURE_NOT_OWNED',))
 
     def test_symlink_and_windows_reparse_metadata_refused_before_connection(self):
-        with temporary_fixture() as owner:
-            req, _ = fixture(owner); original = Path.lstat
+        for target in ('root_info', 'file_info'):
             for attributes, mode in ((0, stat.S_IFLNK), (0x400, stat.S_IFREG)):
-                def mocked(path):
-                    if path == owner.path:
-                        return SimpleNamespace(st_mode=mode, st_file_attributes=attributes)
-                    return original(path)
-                with patch.object(Path, 'lstat', mocked), patch('sqlite3.connect', side_effect=AssertionError('Link connection')):
-                    self.assertEqual(inspect_fixture(req).reasons, ('FIXTURE_PATH_UNSAFE',))
+                with self.subTest(target=target, attributes=attributes), VirtualFixtureFilesystem().registered() as (owner, lease):
+                    req = virtual_request(owner)
+                    info = owner._lease['root'] if target == 'root_info' else owner.path
+                    fs_stat = info.lstat()
+                    fs_stat.st_mode = mode
+                    fs_stat.st_file_attributes = attributes
+                    with patch('sqlite3.connect', side_effect=AssertionError('Link connection')):
+                        self.assertEqual(inspect_fixture(req).reasons, ('FIXTURE_PATH_UNSAFE',))
+                    self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+                    self.assertTrue(lease['unsafe'])
+                    with self.assertRaises(_Refused): _cleanup_fixture(lease)
 
     def test_replaced_inode_or_root_identity_refused(self):
-        with temporary_fixture() as owner:
-            req, _ = fixture(owner); lease = _FIXTURES[owner.token.fixture_id]
-            actual = lease['file_key']; lease['file_key'] = (actual[0], actual[1] + 1)
-            try:
+        for target in ('root_info', 'file_info'):
+            fs = VirtualFixtureFilesystem()
+            with self.subTest(target=target), fs.registered() as (owner, lease):
+                req = virtual_request(owner)
+                getattr(fs, target).st_ino += 1
                 with patch('sqlite3.connect', side_effect=AssertionError('Replaced fixture')):
                     self.assertEqual(inspect_fixture(req).reasons, ('FIXTURE_IDENTITY_MISMATCH',))
-            finally: lease['file_key'] = actual
+                self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+                with self.assertRaises(_Refused): _cleanup_fixture(lease)
+                self.assertFalse(set(fs.operations) & {'unlink', 'rmdir'})
 
     def test_protected_symbol_and_interval_decoys_excluded(self):
         with temporary_fixture() as owner:
@@ -309,6 +418,286 @@ class SQLiteFixtureTests(unittest.TestCase):
             with self.assertRaises(ValueError):replace(req,fixture=result())
             with patch('sqlite3.connect',side_effect=AssertionError('Not authorization')):
                 self.assertEqual(inspect_fixture(result()).reasons,('UNAPPROVED_SCOPE',))
+
+
+class SQLiteFixtureLifecycleTests(unittest.TestCase):
+    def assert_no_deletion(self, fs):
+        self.assertFalse(set(fs.operations) & {'unlink', 'rmdir'})
+
+    def test_creation_permission_and_cleanup_permission_errors_are_separate(self):
+        fs = VirtualFixtureFilesystem()
+        primary = PermissionError('Invented exclusive-file creation denial')
+        cleanup = PermissionError('Invented root removal denial')
+        fs.open_error, fs.rmdir_error = primary, cleanup
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(ExceptionGroup) as caught:
+            with temporary_fixture(): self.fail('Denied creation yielded an owner')
+        self.assertEqual(caught.exception.exceptions, (primary, cleanup))
+        self.assertEqual(fs.operations, ['mkdir', 'open', 'rmdir'])
+        self.assertTrue(fs.created)
+        self.assertFalse(fs.file_created)
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_denied_file_creation_removes_only_the_verified_empty_root(self):
+        fs = VirtualFixtureFilesystem()
+        primary = PermissionError('Invented file creation denial')
+        fs.open_error = primary
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(PermissionError) as caught:
+            with temporary_fixture(): self.fail('Denied creation yielded an owner')
+        self.assertIs(caught.exception, primary)
+        self.assertEqual(fs.operations, ['mkdir', 'open', 'rmdir'])
+        self.assertFalse(fs.created)
+        self.assertFalse(fs.file_created)
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_root_creation_permission_denial_creates_no_lease_or_cleanup(self):
+        fs = VirtualFixtureFilesystem()
+        primary = PermissionError('Invented root creation denial')
+        fs.mkdir_error = primary
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(PermissionError) as caught:
+            with temporary_fixture(): self.fail('Denied root yielded an owner')
+        self.assertIs(caught.exception, primary)
+        self.assertEqual(fs.operations, ['mkdir'])
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_root_collision_never_adopts_or_deletes_the_unowned_path(self):
+        fs = VirtualFixtureFilesystem()
+        primary = FileExistsError('Invented root collision')
+        fs.mkdir_error = primary
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(FileExistsError) as caught:
+            with temporary_fixture(): self.fail('Colliding root yielded an owner')
+        self.assertIs(caught.exception, primary)
+        self.assertEqual(fs.operations, ['mkdir'])
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_root_identity_capture_failure_preserves_both_failures(self):
+        fs = VirtualFixtureFilesystem()
+        primary = PermissionError('Invented root metadata denial')
+        fs.root_capture_error = primary
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(ExceptionGroup) as caught:
+            with temporary_fixture(): self.fail('Unverified root yielded an owner')
+        self.assertIs(caught.exception.exceptions[0], primary)
+        self.assertIsInstance(caught.exception.exceptions[1], _Refused)
+        self.assertEqual(caught.exception.exceptions[1].reason, 'FIXTURE_IDENTITY_MISMATCH')
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_file_identity_capture_failure_does_not_delete_unverified_file(self):
+        fs = VirtualFixtureFilesystem()
+        primary = PermissionError('Invented fixture metadata denial')
+        fs.file_capture_error = primary
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(ExceptionGroup) as caught:
+            with temporary_fixture(): self.fail('Unverified file yielded an owner')
+        self.assertIs(caught.exception.exceptions[0], primary)
+        self.assertIsInstance(caught.exception.exceptions[1], _Refused)
+        self.assertTrue(fs.created and fs.file_created)
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_body_and_cleanup_failures_preserve_original_exception_objects(self):
+        fs = VirtualFixtureFilesystem()
+        primary = ValueError('Invented fixture-body failure')
+        cleanup = PermissionError('Invented exact-unlink denial')
+        fs.unlink_error = cleanup
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(ExceptionGroup) as caught:
+            with temporary_fixture() as owner:
+                owner.seal()
+                raise primary
+        self.assertEqual(caught.exception.exceptions, (primary, cleanup))
+        self.assertEqual(fs.operations, ['mkdir', 'open', 'unlink'])
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_cleanup_failure_without_primary_is_not_silently_successful(self):
+        fs = VirtualFixtureFilesystem()
+        cleanup = PermissionError('Invented exact-root removal denial')
+        fs.rmdir_error = cleanup
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(PermissionError) as caught:
+            with temporary_fixture() as owner: owner.seal()
+        self.assertIs(caught.exception, cleanup)
+        self.assertEqual(fs.operations, ['mkdir', 'open', 'unlink', 'rmdir'])
+        self.assertTrue(fs.created)
+        self.assertFalse(fs.file_created)
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_sealing_identity_failure_revokes_and_never_deletes(self):
+        fs = VirtualFixtureFilesystem()
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(ExceptionGroup) as caught:
+            with temporary_fixture() as owner:
+                fs.file_info.st_ino += 1
+                owner.seal()
+        self.assertEqual(tuple(e.reason for e in caught.exception.exceptions),
+                         ('FIXTURE_IDENTITY_MISMATCH', 'FIXTURE_IDENTITY_MISMATCH'))
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_teardown_root_identity_change_never_deletes_or_retains_lease(self):
+        fs = VirtualFixtureFilesystem()
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(_Refused) as caught:
+            with temporary_fixture() as owner:
+                owner.seal()
+                fs.root_info.st_ino += 1
+        self.assertEqual(caught.exception.reason, 'FIXTURE_IDENTITY_MISMATCH')
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_unexpected_root_entry_blocks_exact_cleanup_without_deletion(self):
+        fs = VirtualFixtureFilesystem()
+        before = set(_FIXTURES)
+        with fs.patched(), self.assertRaises(_Refused) as caught:
+            with temporary_fixture() as owner:
+                owner.seal()
+                fs.extra_entries = (fs.root / 'unowned-decoy',)
+        self.assertEqual(caught.exception.reason, 'FIXTURE_PATH_UNSAFE')
+        self.assertEqual(set(_FIXTURES), before)
+        self.assert_no_deletion(fs)
+
+    def test_revoked_owner_cannot_reseal_or_regain_audit_access(self):
+        fs = VirtualFixtureFilesystem()
+        with fs.registered() as (owner, lease):
+            _revoke(lease)
+            with self.assertRaises(_Refused) as caught: owner.seal()
+            self.assertEqual(caught.exception.reason, 'FIXTURE_NOT_OWNED')
+            self.assertFalse(_audited_connection(str(owner.path)))
+            self.assertFalse(_audited_connection(owner.path.as_uri() + '?mode=ro'))
+            self.assert_no_deletion(fs)
+
+    def test_audit_identity_change_revokes_without_opening_or_deleting(self):
+        fs = VirtualFixtureFilesystem()
+        with fs.registered() as (owner, lease):
+            fs.file_info.st_ino += 1
+            self.assertFalse(_audited_connection(owner.path.as_uri() + '?mode=ro'))
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            self.assertTrue(lease['unsafe'])
+            self.assert_no_deletion(fs)
+
+    def test_hardlinked_fixture_metadata_is_refused_and_not_deleted(self):
+        fs = VirtualFixtureFilesystem()
+        with fs.registered() as (owner, lease):
+            fs.file_info.st_nlink = 2
+            with self.assertRaises(_Refused) as caught: _check_path(lease)
+            self.assertEqual(caught.exception.reason, 'FIXTURE_PATH_UNSAFE')
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            with self.assertRaises(_Refused): _cleanup_fixture(lease)
+            self.assert_no_deletion(fs)
+
+    def test_body_error_removes_new_real_fixture_and_expires_capability(self):
+        primary = ValueError('Invented body failure')
+        before = set(_FIXTURES)
+        with self.assertRaises(ValueError) as caught:
+            with temporary_fixture() as owner:
+                owner.seal()
+                path, root, token = owner.path, owner.path.parent, owner.token
+                raise primary
+        self.assertIs(caught.exception, primary)
+        self.assertFalse(path.exists())
+        self.assertFalse(root.exists())
+        self.assertNotIn(token.fixture_id, _FIXTURES)
+        self.assertFalse(_audited_connection(path.as_uri() + '?mode=ro'))
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_read_connection_permission_failure_revokes_real_owned_fixture(self):
+        before = set(_FIXTURES)
+        with temporary_fixture() as owner:
+            req, _ = fixture(owner)
+            path, root = owner.path, owner.path.parent
+            with patch('sqlite3.connect', side_effect=PermissionError('Invented connection denial')):
+                out = inspect_fixture(req)
+            self.assertEqual(out.reasons, ('FIXTURE_IO_DENIED',))
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            self.assertFalse(_audited_connection(path.as_uri() + '?mode=ro'))
+            with self.assertRaises(_Refused): owner.seal()
+        self.assertFalse(path.exists())
+        self.assertFalse(root.exists())
+        self.assertEqual(set(_FIXTURES), before)
+
+    def test_read_and_close_failures_keep_separate_safe_diagnostics(self):
+        fs = VirtualFixtureFilesystem()
+        connection = Mock()
+        primary = sqlite3.DatabaseError('Invented private-message read error')
+        cleanup = PermissionError('Invented private-message close error')
+        connection.execute.side_effect = primary
+        connection.close.side_effect = cleanup
+        with fs.registered() as (owner, lease):
+            req = virtual_request(owner)
+            with patch('sqlite3.connect', return_value=connection) as connect:
+                out = inspect_fixture(req)
+            self.assertEqual(out.reasons, ('FIXTURE_LIFECYCLE_FAILED',))
+            self.assertEqual(out.failure_categories, ('primary:DatabaseError', 'cleanup:PermissionError'))
+            self.assertNotIn('private-message', repr(out))
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            connection.close.assert_called_once_with()
+            self.assertEqual(connect.call_args.args, (owner.path.as_uri() + '?mode=ro',))
+            self.assertIs(connect.call_args.kwargs['uri'], True)
+            self.assert_no_deletion(fs)
+
+    def test_connection_close_failure_revokes_without_masking_successful_read(self):
+        fs = VirtualFixtureFilesystem()
+        connection = Mock()
+        connection.execute.return_value.fetchone.return_value = (1,)
+        cleanup = PermissionError('Invented close denial')
+        connection.close.side_effect = cleanup
+        with fs.registered() as (owner, lease):
+            with patch('sqlite3.connect', return_value=connection), self.assertRaises(PermissionError) as caught:
+                with _reader(lease, scope()) as (con, gate):
+                    self.assertIs(con, connection)
+                    self.assertEqual(gate.phase, 'transaction')
+            self.assertIs(caught.exception, cleanup)
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            connection.close.assert_called_once_with()
+            self.assert_no_deletion(fs)
+
+    def test_reader_post_read_identity_change_revokes_and_refuses_cleanup(self):
+        fs = VirtualFixtureFilesystem()
+        connection = Mock()
+        connection.execute.return_value.fetchone.return_value = (1,)
+        with fs.registered() as (owner, lease):
+            with patch('sqlite3.connect', return_value=connection), self.assertRaises(_Refused) as caught:
+                with _reader(lease, scope()): fs.file_info.st_ino += 1
+            self.assertEqual(caught.exception.reason, 'FIXTURE_IDENTITY_MISMATCH')
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            connection.close.assert_called_once_with()
+            with self.assertRaises(_Refused): _cleanup_fixture(lease)
+            self.assert_no_deletion(fs)
+
+    def test_interrupt_and_close_failure_are_preserved_and_not_swallowed(self):
+        fs = VirtualFixtureFilesystem()
+        connection = Mock()
+        primary = KeyboardInterrupt('Invented interrupt')
+        cleanup = PermissionError('Invented close denial')
+        connection.execute.side_effect = primary
+        connection.close.side_effect = cleanup
+        with fs.registered() as (owner, lease):
+            req = virtual_request(owner)
+            with patch('sqlite3.connect', return_value=connection), self.assertRaises(BaseExceptionGroup) as caught:
+                inspect_fixture(req)
+            self.assertNotIsInstance(caught.exception, ExceptionGroup)
+            self.assertEqual(caught.exception.exceptions, (primary, cleanup))
+            self.assertNotIn(owner.token.fixture_id, _FIXTURES)
+            connection.close.assert_called_once_with()
+            self.assert_no_deletion(fs)
+
+    def test_exact_cleanup_uses_no_chmod_recursive_cleanup_or_finalizer(self):
+        before = set(_FIXTURES)
+        with patch('os.chmod', side_effect=AssertionError('No permission changes')), \
+                patch('shutil.rmtree', side_effect=AssertionError('No recursive cleanup')), \
+                patch('tempfile.TemporaryDirectory', side_effect=AssertionError('No cleanup finalizer')):
+            with temporary_fixture() as owner:
+                owner.seal()
+                path, root = owner.path, owner.path.parent
+        self.assertFalse(path.exists())
+        self.assertFalse(root.exists())
+        self.assertEqual(set(_FIXTURES), before)
 
 
 if __name__ == '__main__':

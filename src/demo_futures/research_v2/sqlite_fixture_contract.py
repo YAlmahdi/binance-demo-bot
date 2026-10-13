@@ -3,11 +3,12 @@ from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sqlite3
 import stat
-import tempfile
+import sys
 import uuid
 
 from ..data import Candle
@@ -30,7 +31,7 @@ _FIXTURES = {}
 _REASONS = ("UNAPPROVED_SCOPE", "FIXTURE_NOT_OWNED", "FIXTURE_PATH_UNSAFE",
             "FIXTURE_IDENTITY_MISMATCH", "SCHEMA_MISMATCH", "SNAPSHOT_MISMATCH",
             "SCOPED_HASH_INVALID", "QUERY_DENIED", "INVALID_ROWS", "CANDLE_GAP",
-            "SOURCE_OR_CAUSAL_INSUFFICIENT")
+            "SOURCE_OR_CAUSAL_INSUFFICIENT", "FIXTURE_IO_DENIED", "FIXTURE_LIFECYCLE_FAILED")
 
 
 @dataclass(frozen=True)
@@ -80,6 +81,7 @@ class AccessDiagnostics:
     row_count: int = 0
     rows_sha256: str | None = None
     boundary: BoundaryDiagnostics | None = None
+    failure_categories: tuple[str, ...] = ()
     evidence: str = field(default="SYNTHETIC_ONLY", init=False)
     historical_evidence: str = field(default="UNAUTHENTICATED / NOT VERIFIED", init=False)
     authority: str = field(default="DIAGNOSTICS_ONLY", init=False)
@@ -91,6 +93,8 @@ class AccessDiagnostics:
                 or type(self.row_count) is not int or self.row_count < 0
                 or (self.rows_sha256 is not None and not _hex(self.rows_sha256))
                 or (self.boundary is not None and type(self.boundary) is not BoundaryDiagnostics)
+                or type(self.failure_categories) is not tuple
+                or any(type(v) is not str or re.fullmatch(r"[A-Za-z]+:[A-Za-z_]+", v) is None for v in self.failure_categories)
                 or ((self.status == Readiness.SUFFICIENT) != (not self.reasons))):
             raise ValueError("Immutable access diagnostics only")
         object.__setattr__(self, "reasons", tuple(r for r in _REASONS if r in self.reasons))
@@ -132,14 +136,68 @@ def _file_key(path):
     return info.st_dev, info.st_ino
 
 
-def _check_path(lease):
-    if (_file_key(lease["root"]) != lease["root_key"]
-            or _file_key(lease["path"]) != lease["file_key"]):
+def _revoke(lease):
+    if _FIXTURES.get(lease["token"].fixture_id) is lease:
+        _FIXTURES.pop(lease["token"].fixture_id)
+
+
+def _check_root(lease):
+    if _file_key(lease["root"]) != lease["root_key"]:
         raise _Refused("FIXTURE_IDENTITY_MISMATCH")
-    info = lease["path"].lstat()
-    if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
-            or lease["path"].resolve() != lease["path"]):
+    if not stat.S_ISDIR(lease["root"].lstat().st_mode) or lease["root"].resolve() != lease["root"]:
         raise _Refused("FIXTURE_PATH_UNSAFE")
+
+
+def _check_path(lease):
+    try:
+        _check_root(lease)
+        if _file_key(lease["path"]) != lease["file_key"]:
+            raise _Refused("FIXTURE_IDENTITY_MISMATCH")
+        info = lease["path"].lstat()
+        if (not stat.S_ISREG(info.st_mode) or info.st_nlink != 1
+                or lease["path"].resolve() != lease["path"]):
+            raise _Refused("FIXTURE_PATH_UNSAFE")
+    except BaseException:
+        lease["unsafe"] = True
+        _revoke(lease)
+        raise
+
+
+def _temporary_base():
+    """Read configured temporary-root metadata; never run tempfile's write probes."""
+    value = os.environ.get("TEMP") if os.name == "nt" else os.environ.get("TMPDIR", "/tmp")
+    if type(value) is not str or not value or not Path(value).is_absolute():
+        raise _Refused("FIXTURE_PATH_UNSAFE")
+    base = Path(value).absolute()
+    _file_key(base)
+    if not stat.S_ISDIR(base.lstat().st_mode) or base.resolve() != base or base.is_relative_to(_PROJECT):
+        raise _Refused("FIXTURE_PATH_UNSAFE")
+    return base
+
+
+def _raise_failures(primary, cleanup):
+    if primary is not None and cleanup is not None:
+        raise BaseExceptionGroup("Fixture primary and cleanup failures", [primary, cleanup]) from None
+    if primary is not None:
+        raise primary
+    if cleanup is not None:
+        raise cleanup
+
+
+def _cleanup_fixture(lease):
+    """Exact file/root deletion only. Uncertain ownership is never repaired."""
+    if lease["unsafe"] or lease["root_key"] is None:
+        raise _Refused("FIXTURE_IDENTITY_MISMATCH")
+    _check_root(lease)
+    entries = tuple(lease["root"].iterdir())
+    expected = () if lease["file_key"] is None else (lease["path"],)
+    if entries != expected:
+        raise _Refused("FIXTURE_PATH_UNSAFE")
+    if lease["file_key"] is not None:
+        _check_path(lease)
+        lease["path"].unlink()
+    _check_root(lease)
+    lease["root"].rmdir()
 
 
 class FixtureOwner:
@@ -156,42 +214,60 @@ class FixtureOwner:
         return self._lease["path"]
 
     def seal(self):
+        if _FIXTURES.get(self.token.fixture_id) is not self._lease:
+            raise _Refused("FIXTURE_NOT_OWNED")
         _check_path(self._lease)
         self._lease["sealed"] = True
 
 
 @contextmanager
 def temporary_fixture():
-    """Mint one empty fixture under a fresh system temporary directory, not a path input."""
-    temporary = tempfile.TemporaryDirectory(prefix="v2_sqlite_contract_")
-    root = Path(temporary.name).absolute()
+    """One fresh inherited-permission Windows root; no finalizer, chmod or retry."""
     token = FixtureToken(uuid.uuid4().hex)
-    lease = {"root": root, "path": root / token.relative_name, "token": token,
-             "root_key": _file_key(root), "file_key": None, "sealed": False}
-    if root.is_relative_to(_PROJECT):
-        temporary.cleanup()
-        raise _Refused("FIXTURE_PATH_UNSAFE")
-    _FIXTURES[token.fixture_id] = lease
+    lease = None
+    primary = cleanup = None
     try:
+        root = _temporary_base() / ("v2_sqlite_contract_" + token.fixture_id)
+        lease = {"root": root, "path": root / token.relative_name, "token": token,
+                 "root_key": None, "file_key": None, "sealed": False,
+                 "root_created": False, "unsafe": False}
+        sys.audit("tempfile.mkdtemp", str(root))
+        # Ordinary creation inherits the parent's Windows sandbox access. No ACL edit.
+        root.mkdir(mode=0o777 if os.name == "nt" else 0o700)
+        lease["root_created"] = True
+        lease["root_key"] = _file_key(root)
+        _check_root(lease)
+        _FIXTURES[token.fixture_id] = lease
         with lease["path"].open("xb"):
             pass
         lease["file_key"] = _file_key(lease["path"])
         yield FixtureOwner(lease)
+    except BaseException as exc:
+        primary = exc
     finally:
-        # The only recursive cleanup target is the exact newly minted temp root.
-        if _file_key(root) != lease["root_key"]:
-            raise _Refused("FIXTURE_PATH_UNSAFE")
-        temporary.cleanup()
-        _FIXTURES.pop(token.fixture_id, None)
+        if lease is not None:
+            _revoke(lease)
+            if lease["root_created"]:
+                try:
+                    _cleanup_fixture(lease)
+                except BaseException as exc:
+                    cleanup = exc
+    _raise_failures(primary, cleanup)
 
 
 def _audited_connection(value):
     """Runner guard support: exact build path or exact sealed read-only URI only."""
     if type(value) is not str:
         return False
-    return any((not l["sealed"] and value == str(l["path"])) or
-               (l["sealed"] and value == l["path"].as_uri() + "?mode=ro")
-               for l in _FIXTURES.values())
+    for lease in tuple(_FIXTURES.values()):
+        wanted = lease["path"].as_uri() + "?mode=ro" if lease["sealed"] else str(lease["path"])
+        if value == wanted and lease["file_key"] is not None:
+            try:
+                _check_path(lease)
+            except (OSError, _Refused):
+                return False
+            return True
+    return False
 
 
 def _lease_for(token):
@@ -247,10 +323,12 @@ class _QueryGate:
 
 @contextmanager
 def _reader(lease, scope):
-    _check_path(lease)
-    con = sqlite3.connect(lease["path"].as_uri() + "?mode=ro", uri=True,
-                          timeout=1.0, isolation_level=None, cached_statements=0)
+    con = None
+    primary = cleanup = None
     try:
+        _check_path(lease)
+        con = sqlite3.connect(lease["path"].as_uri() + "?mode=ro", uri=True,
+                              timeout=1.0, isolation_level=None, cached_statements=0)
         con.execute("PRAGMA query_only=ON")
         con.execute("PRAGMA trusted_schema=OFF")
         if con.execute("PRAGMA query_only").fetchone() != (1,):
@@ -263,8 +341,17 @@ def _reader(lease, scope):
         _check_path(lease)
         yield con, gate
         _check_path(lease)
+    except BaseException as exc:
+        primary = exc
+        _revoke(lease)
     finally:
-        con.close()
+        if con is not None:
+            try:
+                con.close()
+            except BaseException as exc:
+                cleanup = exc
+                _revoke(lease)
+    _raise_failures(primary, cleanup)
 
 
 def _validate_request(request):
@@ -340,6 +427,12 @@ def inspect_fixture(request):
             return AccessDiagnostics(Readiness.SUFFICIENT, (), len(rows), digest, boundary)
     except _Refused as exc:
         return AccessDiagnostics(Readiness.INVALID, (exc.reason,))
+    except PermissionError:
+        return AccessDiagnostics(Readiness.INVALID, ("FIXTURE_IO_DENIED",))
+    except ExceptionGroup as exc:
+        categories = tuple("primary:" + type(e).__name__ if i == 0 else "cleanup:" + type(e).__name__
+                           for i, e in enumerate(exc.exceptions))
+        return AccessDiagnostics(Readiness.INVALID, ("FIXTURE_LIFECYCLE_FAILED",), failure_categories=categories)
     except sqlite3.DatabaseError:
         return AccessDiagnostics(Readiness.INVALID, ("QUERY_DENIED",))
     except (ValueError, TypeError, AttributeError, ArithmeticError, OSError):
