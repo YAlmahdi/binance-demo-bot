@@ -134,6 +134,27 @@ SQLite predicates do not prove physical-page isolation. Parent ACL inheritance
 is not a new confidentiality guarantee against other host processes. Historical
 Loader readiness, five adverse reserve findings and RISK NOT CLEARED unchanged.
 
+## Publication recovery — 2026-10-13
+
+The five-file SQLite lifecycle remediation was successfully published to PRIVATE
+`YAlmahdi/binance-demo-bot`, `origin/main`, in
+`ed6726cea5923658880c34eaebed8f68c2484d82`. Fresh independent remote verification
+confirmed that exact commit. Earlier DNS failures and BLOCKED reports retain
+their historical meaning; they no longer describe the remediation's publication
+state. The approved Codex network-permission mechanism enabled the successful
+remote verification and push. No system DNS/proxy/firewall/ACL, remote or
+authentication settings were changed.
+
+Publication recovery reused the two previous 161-pass runs (zero failures,
+errors or skips), successful normal-sandbox preflight, zero final leases and
+75 removed task-owned temporary roots. Tests and cleanup were not rerun during
+recovery. These are saved execution receipts, not new filesystem verification.
+Ignored evidence remains local. The earlier unpublished PROJECT_STATUS.md entry
+was excluded from the remediation commit and remains preserved verbatim locally.
+The existing race, real-link, physical-page isolation, funding, availability and
+risk limitations above remain unchanged. No Historical Loader/Adapter, research
+or trading approval follows from publication; F/C/A/Q PENDING and RISK NOT CLEARED.
+
 ## Proposed, unresolved and blocked
 
 A real-data adapter, historical source access, evidence-aware funding/receipt
