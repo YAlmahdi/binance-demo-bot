@@ -28,6 +28,61 @@ def binding(e=None, **changes):
 
 
 class PlanBudgetTests(unittest.TestCase):
+    def test_each_tampered_envelope_metadata_type_is_rejected_before_comparison(self):
+        class Foreign:
+            def __eq__(self, other):
+                raise AssertionError("comparison before schema validation")
+            __ne__ = __eq__
+        for name in ("symbol", "interval", "side", "source_id", "version",
+                     "decision_time", "as_of", "holding_start", "holding_end", "closure_end"):
+            with self.subTest(field=name):
+                e = envelope()
+                b = binding(e)
+                object.__setattr__(e, name, Foreign())
+                self.reject(e=e, b=b, reason="INVALID_SCHEMA", status=Readiness.INVALID)
+
+    def test_adjacent_representable_budget_values_use_exact_comparison(self):
+        # Existing fixed 50-digit reconciliation context, not a new tolerance.
+        from demo_futures.risk_remediation.plan_budget_contract import reconciliation_context
+        with localcontext(reconciliation_context()):
+            below, above = D(51).next_minus(), D(51).next_plus()
+        for budget, comparison in ((below, "EXCEEDS"), (D(51), "WITHIN"), (above, "WITHIN")):
+            output = assess_plan_budget(plan(budget=budget), envelope(), binding())
+            self.assertEqual(output.comparison, comparison)
+
+    def test_inexact_decomposition_is_not_rounded_into_a_match(self):
+        self.reject(b=binding(nonfunding_loss=D("49." + "0" * 60 + "1")),
+                    reason="ARITHMETIC_UNSUPPORTED", status=Readiness.INVALID)
+
+    def test_valid_synthetic_identity_does_not_authenticate_decomposition(self):
+        identity = replace(evidence("PLAN_BUDGET_DECOMPOSITION"), identity="other-invented-assertion")
+        out = assess_plan_budget(plan(), envelope(), binding(evidence_identity=identity))
+        self.assertEqual(out.status, Readiness.SUFFICIENT)
+        self.assertEqual(out.authority, "SYNTHETIC_DIAGNOSTIC_ONLY")
+        self.assertEqual(out.risk_clearance, "NOT CLEARED")
+
+    def test_duplicate_settlement_is_not_admitted_as_extra_stress(self):
+        e = envelope((scenario(((BASE + HOUR, ".002", "100"),) * 2),))
+        self.reject(e=e, b=binding(e), reason="M1_INVALID", status=Readiness.INVALID)
+
+    def test_nonfinite_or_inconsistent_diagnostic_construction_is_rejected(self):
+        out = assess_plan_budget(plan(), envelope(), binding())
+        for changes in ({"adjusted_loss": D("NaN")}, {"headroom": D("Infinity")},
+                        {"comparison": "APPROVED"}, {"reasons": ("UNREVIEWED",)}):
+            with self.subTest(changes=changes), self.assertRaises(ValueError):
+                replace(out, **changes)
+
+    def test_tampered_envelope_metadata_never_invokes_foreign_comparison(self):
+        class Foreign:
+            def __eq__(self, other):
+                raise AssertionError("foreign metadata comparison executed")
+            def __ne__(self, other):
+                raise AssertionError("foreign metadata comparison executed")
+        e = envelope()
+        b = binding(e)
+        object.__setattr__(e, "symbol", Foreign())
+        self.reject(e=e, b=b, reason="INVALID_SCHEMA", status=Readiness.INVALID)
+
     def reject(self, p=None, e=None, b=None, reason=None, status=None):
         output = assess_plan_budget(plan() if p is None else p,
             envelope() if e is None else e, binding() if b is None else b)

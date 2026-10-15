@@ -20,7 +20,7 @@ from decimal import Decimal, DecimalException, Inexact, localcontext
 
 from ..risk import PositionPlan
 from ..research_v2.contracts import EvidenceIdentity, Readiness, valid_evidence, valid_identity, valid_time
-from .funding_budget import SyntheticFundingStressEnvelope, _context, assess_funding_budget
+from .funding_budget import SyntheticFundingStressEnvelope, _context, _envelope_shape, assess_funding_budget
 
 REASONS = ("INVALID_SCHEMA", "INVALID_NUMBER", "INVALID_BINDING", "INVALID_TIME",
            "INVALID_EVIDENCE", "PLAN_LEVELS_INVALID", "EXPOSURE_MISMATCH",
@@ -105,7 +105,10 @@ def assess_plan_budget(plan, envelope, binding):
             or type(envelope) is not SyntheticFundingStressEnvelope):
         return failure(("INVALID_SCHEMA",))
     try:
-        if (any(type(getattr(binding, n)) is not str for n in TEXT_FIELDS)
+        # Validate M1's raw shape before comparing nested metadata: tampering can
+        # otherwise dispatch foreign __eq__/__ne__ before M1 gets to reject it.
+        if (not _envelope_shape(envelope)
+                or any(type(getattr(binding, n)) is not str for n in TEXT_FIELDS)
                 or any(type(getattr(binding, n)) is not int for n in TIME_FIELDS)
                 or any(type(getattr(binding, n)) is not Decimal for n in NUMBER_FIELDS)
                 or any(type(getattr(plan, n)) is not Decimal for n in PLAN_FIELDS)):
