@@ -40,6 +40,121 @@ def change_raw(d, collection, index, **changes):
 
 
 class InventoryTests(unittest.TestCase):
+    def test_constructor_structural_reason_requires_matching_readiness(self):
+        for status, reason in ((Readiness.INSUFFICIENT, "INVALID_SCHEMA"),
+                (Readiness.INVALID, "STALE_SNAPSHOT")):
+            with self.subTest(reason=reason), self.assertRaises(ValueError):
+                InventoryDiagnostic(status, (reason,))
+
+    def test_nested_result_foreign_reason_never_compared(self):
+        class Foreign:
+            def __eq__(self, other):
+                raise AssertionError("foreign diagnostic reason compared")
+        result = assess_inventory(change_raw(inventory(1), "plans", 0, quantity=D(11))).positions[0].result
+        object.__setattr__(result, "reasons", (Foreign(),))
+        with self.assertRaises(ValueError):
+            PositionDiagnostic("position-000", result)
+
+    def test_nested_result_foreign_comparison_never_compared(self):
+        class Foreign:
+            def __ne__(self, other):
+                raise AssertionError("foreign monetary comparison dispatched")
+        result = assess_inventory(inventory(1)).positions[0].result
+        object.__setattr__(result, "comparison", Foreign())
+        with self.assertRaises(ValueError):
+            PositionDiagnostic("position-000", result)
+
+    def test_nested_tampered_authority_is_not_retained(self):
+        for name in ("evidence", "authority", "risk_clearance"):
+            with self.subTest(field=name):
+                row = assess_inventory(inventory(1)).positions[0]
+                object.__setattr__(row.result, name, "FORGED")
+                with self.assertRaises(ValueError):
+                    replace(row)
+                with self.assertRaises(ValueError):
+                    InventoryDiagnostic(Readiness.SUFFICIENT, positions=(row,))
+
+    def test_deleted_nested_fields_fail_closed_before_m2(self):
+        for target in ("identity", "event", "schedule", "claim", "binding"):
+            d = inventory(1)
+            e = d.envelopes[0].value
+            obj, name = {"identity": (e.evidence_identity, "assertion"),
+                "event": (e.scenarios[0].claim.observations[0], "rate"),
+                "schedule": (e.scenarios[0].claim.schedule, "complete"),
+                "claim": (e.scenarios[0].claim, "state"),
+                "binding": (d.bindings[0].value, "quantity")}[target]
+            object.__delattr__(obj, name)
+            with self.subTest(target=target), patch(
+                    "demo_futures.risk_remediation.budget_inventory_contract.assess_plan_budget",
+                    side_effect=AssertionError("M2 called for malformed input")):
+                self.rejected(d, "INVALID_SCHEMA")
+
+    def test_nested_evidence_foreign_fields_never_compared(self):
+        class Foreign:
+            def __eq__(self, other):
+                raise AssertionError("foreign evidence compared")
+            __ne__ = __eq__
+        for target in ("completeness", "joint", "envelope", "timing", "mark", "schedule", "binding"):
+            d = inventory(1)
+            e = d.envelopes[0].value
+            event = e.scenarios[0].claim.observations[0]
+            obj = {"completeness": d.completeness_assertion.identity, "joint": d.joint_assertion.identity,
+                "envelope": e.evidence_identity, "timing": event.timing_evidence,
+                "mark": event.mark_evidence, "schedule": e.scenarios[0].claim.schedule.identity,
+                "binding": d.bindings[0].value.evidence_identity}[target]
+            object.__setattr__(obj, "basis", Foreign())
+            with self.subTest(target=target):
+                self.rejected(d, "INVALID_SCHEMA")
+
+    def test_exact_text_and_decimal_digit_boundaries(self):
+        # Observe actual charged work, then use the same input at equality/-1.
+        from demo_futures.risk_remediation import budget_inventory_contract as module
+        original = module._Meter
+        captured = []
+        class Meter(original):
+            def __init__(self, budget):
+                super().__init__(budget)
+                captured.append(self)
+        d = inventory(1)
+        with patch.object(module, "_Meter", Meter):
+            self.assertEqual(assess_inventory(d).status, Readiness.SUFFICIENT)
+        meter = captured[0]
+        exact = replace(d.resources, max_text_chars=meter.text_chars, max_decimal_digits=meter.digits)
+        self.assertEqual(assess_inventory(replace(d, resources=exact)).status, Readiness.SUFFICIENT)
+        for name in ("max_text_chars", "max_decimal_digits"):
+            with self.subTest(budget=name):
+                self.rejected(replace(d, resources=replace(exact, **{name: getattr(exact, name) - 1})),
+                    "RESOURCE_BUDGET_EXCEEDED")
+
+    def test_repeated_raw_aliases_are_charged_per_position(self):
+        d = inventory(4)
+        self.assertIs(d.envelopes[0].value, d.envelopes[3].value)
+        self.assertEqual(assess_inventory(replace(d, resources=replace(d.resources,
+            max_scenarios=4, max_funding_items=8))).status, Readiness.SUFFICIENT)
+        self.rejected(replace(d, resources=replace(d.resources, max_funding_items=7)), "RESOURCE_BUDGET_EXCEEDED")
+
+    def test_large_nested_tuple_rejected_before_shape_walk(self):
+        d = inventory(1)
+        e = d.envelopes[0].value
+        object.__setattr__(e.scenarios[0].claim, "observations", (object(),) * 256)
+        with patch("demo_futures.risk_remediation.budget_inventory_contract._claim_shape",
+                side_effect=AssertionError("unbudgeted nested traversal")):
+            self.rejected(d, "RESOURCE_BUDGET_EXCEEDED")
+
+    def test_invalid_numeric_and_text_shapes_reject_without_coercion(self):
+        for value in (True, 1, 1.0, "1", None):
+            with self.subTest(value=value):
+                self.rejected(change_raw(inventory(1), "plans", 0, quantity=value), "INVALID_SCHEMA")
+        for value in (True, None, [], 1):
+            self.rejected(inventory(owner_id=value), "INVALID_SCHEMA")
+
+    def test_extreme_exponent_budget_fails_before_m2(self):
+        d = change_raw(inventory(1), "plans", 0, quantity=D("1e1000000000000000"))
+        with patch("demo_futures.risk_remediation.budget_inventory_contract.assess_plan_budget",
+                side_effect=AssertionError("M2 before exponent budget")):
+            self.rejected(replace(d, resources=replace(d.resources, max_integer_bits=48)),
+                "RESOURCE_BUDGET_EXCEEDED")
+
     def test_entry_failure_diagnostic_cannot_omit_all_entries(self):
         with self.assertRaises(ValueError):
             InventoryDiagnostic(Readiness.INVALID, ("ENTRY_INVALID",))

@@ -110,6 +110,15 @@ class PositionDiagnostic:
     def __post_init__(self):
         if type(self.position_id) is not str or not valid_identity(self.position_id) or type(self.result) is not PlanBudgetDiagnostic:
             raise ValueError("Exact immutable position diagnostic required")
+        # M2 is read-only: guard its constructor's comparisons at this boundary,
+        # and reject tampered labels that replace() would silently reset.
+        result = self.result
+        if (type(result.reasons) is not tuple or any(type(r) is not str for r in result.reasons)
+                or (result.comparison is not None and type(result.comparison) is not str)
+                or any(type(getattr(result, name)) is not str or getattr(result, name) != expected
+                    for name, expected in (("evidence", "SYNTHETIC_ONLY"),
+                        ("authority", "SYNTHETIC_DIAGNOSTIC_ONLY"), ("risk_clearance", "NOT CLEARED")))):
+            raise ValueError("Exact diagnostic strings and fixed authority required")
         replace(self.result)  # Revalidate, never grant authority to a forged result.
 
 
@@ -147,6 +156,10 @@ class InventoryDiagnostic:
             raise ValueError("Unique sorted diagnostic positions required")
         if not self.positions and any(r in self.reasons for r in ("ENTRY_INVALID", "ENTRY_INSUFFICIENT")):
             raise ValueError("Entry failures require explicit position diagnostics")
+        if not self.positions and self.reasons:
+            expected = Readiness.INVALID if any(r in REASONS[:11] for r in self.reasons) else Readiness.INSUFFICIENT
+            if self.status != expected:
+                raise ValueError("Structural reasons must match diagnostic readiness")
         if self.positions:
             invalid = any(p.result.status == Readiness.INVALID for p in self.positions)
             missing = any(p.result.status == Readiness.INSUFFICIENT for p in self.positions)
