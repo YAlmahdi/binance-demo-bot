@@ -35,6 +35,92 @@ def with_lifecycle(d, value):
 
 
 class BindingTests(unittest.TestCase):
+    def test_semantic_failure_constructor_requires_retained_children(self):
+        for reason in ("INVALID_EVIDENCE", "DUPLICATE_IDENTITY", "SCOPE_MISMATCH",
+                "SNAPSHOT_MISMATCH", "REVISION_MISMATCH", "TIME_MISMATCH",
+                "MISSING_ASSOCIATION", "MISSING_EVIDENCE"):
+            status=Readiness.INVALID if reason in module.INVALID else Readiness.INSUFFICIENT
+            with self.subTest(reason=reason),self.assertRaises(ValueError):
+                BindingDiagnostic(status,(reason,))
+
+    def test_structural_preflight_failures_can_still_omit_children(self):
+        for reason in ("INVALID_SCHEMA","INVALID_IDENTITY","INVALID_TIME","RESOURCE_BUDGET_EXCEEDED"):
+            out=BindingDiagnostic(Readiness.INVALID,(reason,))
+            self.assertIsNone(out.inventory)
+            self.assertEqual(out.positions,())
+
+    def test_hostile_child_ceiling_fields_rejected_before_comparison(self):
+        class Foreign:
+            def __eq__(self,other):raise AssertionError("foreign budget equality")
+            def __lt__(self,other):raise AssertionError("foreign budget ordering")
+        for name in ("inventory_ceiling","lifecycle_ceiling"):
+            for field in getattr(binding().resources,name).__dataclass_fields__:
+                d=binding();object.__setattr__(getattr(d.resources,name),field,Foreign())
+                with self.subTest(kind=name,field=field),patch.object(module,"assess_lifecycle",side_effect=AssertionError("early M4")),patch.object(module,"assess_inventory",side_effect=AssertionError("early M3")):
+                    self.reject(d,"INVALID_SCHEMA")
+
+    def test_missing_association_keeps_child_ceiling_gate(self):
+        d=replace(binding(),association=None)
+        d=replace(d,resources=replace(d.resources,inventory_ceiling=replace(d.resources.inventory_ceiling,max_scenarios=0)))
+        with patch.object(module,"assess_lifecycle",side_effect=AssertionError("early M4")),patch.object(module,"assess_inventory",side_effect=AssertionError("early M3")):
+            self.reject(d,"RESOURCE_BUDGET_EXCEEDED")
+
+    def test_missing_association_recomputes_once_in_order(self):
+        d=replace(binding(),association=None);order=[]
+        m4,m3=module.assess_lifecycle,module.assess_inventory
+        def lifecycle(raw):order.append("M4");return m4(raw)
+        def inventory(raw):order.append("M3");return m3(raw)
+        with patch.object(module,"assess_lifecycle",side_effect=lifecycle),patch.object(module,"assess_inventory",side_effect=inventory):
+            out=self.reject(d,"MISSING_ASSOCIATION",Readiness.INSUFFICIENT)
+        self.assertEqual(order,["M4","M3"])
+        self.assertEqual(len(out.positions),2)
+
+    def test_tampered_inventory_authority_not_reset_on_copy(self):
+        for name in ("aggregate_state","aggregate_reason","authority","evidence","risk_clearance"):
+            out=assess_binding(binding());object.__setattr__(out.inventory,name,"FORGED")
+            with self.subTest(field=name),self.assertRaises(ValueError):replace(out)
+
+    def test_cross_revision_association_substitution_rejected(self):
+        first=binding();second=binding();l=second.lifecycle
+        ref=replace(l.snapshots[0].ref,revision=7)
+        l=replace(l,snapshots=(replace(l.snapshots[0],ref=ref),),evidence=(replace(l.evidence[0],ref=ref),))
+        second=replace(second,lifecycle=l,association=replace(second.association,revision=7))
+        self.assertEqual(assess_binding(second).status,Readiness.SUFFICIENT)
+        self.reject(replace(second,association=first.association),"REVISION_MISMATCH")
+
+    def test_large_bounded_revision_exact_bit_boundary(self):
+        d=binding();l=d.lifecycle;revision=1<<128
+        ref=replace(l.snapshots[0].ref,revision=revision)
+        l=replace(l,snapshots=(replace(l.snapshots[0],ref=ref),),evidence=(replace(l.evidence[0],ref=ref),),
+            resources=replace(l.resources,max_integer_bits=129))
+        d=with_lifecycle(d,l)
+        d=replace(d,association=replace(d.association,revision=revision),resources=replace(d.resources,max_integer_bits=129))
+        self.assertEqual(assess_binding(d).status,Readiness.SUFFICIENT)
+        self.reject(replace(d,resources=replace(d.resources,max_integer_bits=128)),"RESOURCE_BUDGET_EXCEEDED")
+
+    def test_default_and_current_decimal_traps_do_not_change_results(self):
+        d=binding();expected=assess_binding(d);saved=DefaultContext.copy()
+        try:
+            DefaultContext.prec=1
+            for signal in DefaultContext.traps:DefaultContext.traps[signal]=True
+            with localcontext() as ctx:
+                ctx.prec=1
+                for signal in ctx.traps:ctx.traps[signal]=True
+                before=ctx.copy()
+                self.assertEqual(assess_binding(d),expected)
+                self.assertEqual(dict(ctx.flags),dict(before.flags))
+                self.assertEqual(ctx.prec,1)
+        finally:
+            DefaultContext.prec=saved.prec
+            DefaultContext.traps.update(saved.traps)
+
+    def test_tampered_m5_metadata_budget_exact_types(self):
+        for name in ("max_text_chars","max_integer_bits"):
+            for value in (True,None,"128"):
+                d=binding();object.__setattr__(d.resources,name,value)
+                with self.subTest(field=name,value=value),patch.object(module,"assess_lifecycle",side_effect=AssertionError("early M4")):
+                    self.reject(d,"INVALID_SCHEMA")
+
     def reject(self, d, reason, status=Readiness.INVALID):
         out = assess_binding(d)
         self.assertEqual(out.status, status)

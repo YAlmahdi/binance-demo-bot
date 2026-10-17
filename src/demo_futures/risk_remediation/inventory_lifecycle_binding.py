@@ -132,8 +132,9 @@ class BindingDiagnostic:
             raise ValueError("Binding status and dependency presence must reconcile")
         dependency = tuple(r for r in self.reasons if r.startswith(("M4_", "M3_")))
         if self.inventory is None:
-            if not self.reasons or dependency:
-                raise ValueError("Success/dependency failures require both diagnostics")
+            if not self.reasons or any(r not in ("INVALID_SCHEMA", "INVALID_IDENTITY",
+                    "INVALID_TIME", "RESOURCE_BUDGET_EXCEEDED") for r in self.reasons):
+                raise ValueError("Only structural preflight failures may omit diagnostics")
         else:
             _validate_diagnostic(self.inventory, InventoryDiagnostic)
             _validate_diagnostic(self.lifecycle, LifecycleDiagnostic)
