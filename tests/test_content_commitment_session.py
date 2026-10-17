@@ -351,6 +351,90 @@ class TranscriptTests(unittest.TestCase):
         self.assertEqual(original.candidate_manifest,other.candidate_manifest)
         self.assertEqual(other.external_replay_authority,"NOT VERIFIED")
 
+    def test_output_foreign_fields_reject_without_comparison_hooks(self):
+        class Foreign:
+            def __eq__(self, other): raise AssertionError("foreign equality")
+            def __lt__(self, other): raise AssertionError("foreign ordering")
+            def __bool__(self): raise AssertionError("foreign truth")
+            def __hash__(self): raise AssertionError("foreign hashing")
+
+        out = self.check(transcript(1))
+        row = out.observations[0]
+        for value in (row, out):
+            for name, definition in value.__dataclass_fields__.items():
+                with self.subTest(record=type(value).__name__, field=name), self.assertRaises(ValueError):
+                    if definition.init:
+                        replace(value, **{name: Foreign()})
+                    else:
+                        # Check the original labels at the public parent boundary,
+                        # before dataclasses.replace can restore fixed defaults.
+                        if value is row:
+                            bad_row = forged(row, **{name: Foreign()})
+                            replace(out, observations=(bad_row,))
+                        else:
+                            forged(out, **{name: Foreign()}).__post_init__()
+
+    def test_nested_encoding_configuration_rejects_before_all_m6_calls(self):
+        for location in ("ceiling", "observation"):
+            for name in m7.ENCODING_FIELDS:
+                for bad in (-1, True, 1 << 64):
+                    d = transcript(1)
+                    target = d.resources.per_observation_ceiling if location == "ceiling" else d.candidate.encoding_resources
+                    object.__setattr__(target, name, bad)
+                    with self.subTest(location=location, field=name, value=bad), patch.object(
+                            m6, "commit_content", side_effect=AssertionError("early M6")):
+                        self.check(d, Readiness.INVALID, "INVALID_SCHEMA")
+
+    def test_last_observation_budget_failure_prevents_partial_reassessment(self):
+        d = transcript(3)
+        claim = forged(d.candidate.claimed_manifest, snapshot_time=-(1 << 128))
+        d = replace(d, candidate=replace(d.candidate, claimed_manifest=claim))
+        with patch.object(m6, "commit_content", side_effect=AssertionError("partial M6")):
+            out = self.check(d, Readiness.INVALID, "RESOURCE_BUDGET_EXCEEDED")
+        self.assertEqual(out.observations, ())
+
+    def test_bounded_negative_claim_at_width_limit_retains_all_children(self):
+        d = transcript(3)
+        claim = forged(d.candidate.claimed_manifest, snapshot_time=-((1 << 128) - 1))
+        actual = m6.commit_content
+        with patch.object(m6, "commit_content", wraps=actual) as calls:
+            out = self.check(replace(d, candidate=replace(d.candidate, claimed_manifest=claim)),
+                Readiness.INVALID, "CLAIM_MISMATCH")
+        self.assertEqual(calls.call_count, 3)
+        self.assertEqual(len(out.observations), 3)
+        self.assertTrue(all(row.commitment.status is Readiness.SUFFICIENT for row in out.observations))
+
+    def test_conflict_and_replay_groups_reconcile_independently(self):
+        raw = raw_at()
+        changed = replace(raw, resources=replace(raw.resources, max_text_chars=10001))
+        later = raw_at(1, revision=1, snapshot="other-snapshot")
+        rows = (observation(0, raw), observation(1, later), observation(2, changed), observation(3, later))
+        d = replace(transcript(4), prior=rows[:-1], candidate=rows[-1], evaluation_time=BASE + 1)
+        out = self.check(d, Readiness.INVALID, "CONTEXT_CONTENT_CONFLICT")
+        self.assertEqual(out.reasons, ("UNORDERED_OBSERVATIONS", "CONTEXT_CONTENT_CONFLICT", "CONTEXT_REPLAY"))
+        self.assertEqual(tuple(row.reasons for row in out.observations), (
+            ("CONTEXT_CONTENT_CONFLICT",), (), ("UNORDERED_OBSERVATIONS", "CONTEXT_CONTENT_CONFLICT"), ("CONTEXT_REPLAY",)))
+        # A constructor must reject hiding either conflict or replay in a
+        # locally consistent row, even when the parent already remains INVALID.
+        for index in (0, 3):
+            altered = list(out.observations)
+            altered[index] = replace(altered[index], status=Readiness.SUFFICIENT, reasons=())
+            with self.subTest(hidden=index), self.assertRaises(ValueError):
+                replace(out, observations=tuple(altered))
+
+    def test_failed_middle_observation_does_not_hide_assessment_regression(self):
+        first = observation(0, raw_at(1), available_at=BASE + 1)
+        failed = observation(1, replace(raw_at(1), association=None), claim=False, available_at=BASE + 1)
+        last = observation(2, raw_at(), available_at=BASE + 1)
+        d = replace(transcript(3), prior=(first, failed), candidate=last, evaluation_time=BASE + 1)
+        actual = m6.commit_content
+        with patch.object(m6, "commit_content", wraps=actual) as calls:
+            out = self.check(d, Readiness.INVALID, "UNORDERED_OBSERVATIONS")
+        self.assertEqual(calls.call_count, 3)
+        self.assertIn("M6_INSUFFICIENT", out.observations[1].reasons)
+        self.assertIsNotNone(out.observations[1].commitment.binding)
+        self.assertEqual(out.observations[2].reasons, ("UNORDERED_OBSERVATIONS", "STALE_CONTEXT"))
+
     def test_decimal_context_and_forbidden_io(self):
         d=transcript();expected=m7.assess_transcript(d);saved=DefaultContext.copy()
         try:
