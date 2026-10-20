@@ -28,6 +28,42 @@ def binding(e=None, **changes):
 
 
 class PlanBudgetTests(unittest.TestCase):
+    def test_mixed_signed_events_and_changed_marks_reach_m2_without_credit_offset(self):
+        # Ten units at a 150 mark and adverse .004 rate cost six; the
+        # second event's large credit must not reduce M1's adverse allowance.
+        for side, debit_rate, credit_rate in (("LONG", ".004", "-.9"),
+                                              ("SHORT", "-.004", ".9")):
+            with self.subTest(side=side):
+                e = envelope((scenario(((BASE + HOUR, debit_rate, "150"),
+                                        (BASE + 2 * HOUR, credit_rate, "100"))),), side=side)
+                p = plan() if side == "LONG" else plan(stop_price=D(102), target_price=D(97))
+                b = binding(e)
+                original = (repr(p), repr(e), repr(b))
+                out = assess_plan_budget(p, e, b)
+                self.assertEqual(out.status, Readiness.SUFFICIENT)
+                self.assertEqual((out.adjusted_loss, out.budget, out.headroom, out.comparison),
+                                 (D(55), D(50), D(-5), "EXCEEDS"))
+                self.assertEqual((repr(p), repr(e), repr(b)), original)
+                self.assertEqual(out.authority, "SYNTHETIC_DIAGNOSTIC_ONLY")
+
+    def test_inexact_headroom_subtraction_returns_no_amounts(self):
+        # Exposure, reserve, decomposition and adjusted loss remain exactly
+        # representable; only the budget-minus-adjusted-loss operation rounds.
+        output = self.reject(p=plan(budget=D("1e100")),
+                             reason="ARITHMETIC_UNSUPPORTED", status=Readiness.INVALID)
+        self.assertEqual(output.reasons, ("ARITHMETIC_UNSUPPORTED",))
+
+    def test_binding_and_evidence_failures_precede_m1_evaluation(self):
+        e = envelope()
+        cases = ((binding(e, source_id="other"), "INVALID_BINDING", Readiness.INVALID),
+                 (binding(e, evidence_identity=None), "MISSING_EVIDENCE", Readiness.INSUFFICIENT))
+        for b, reason, status in cases:
+            with self.subTest(reason=reason), patch(
+                    "demo_futures.risk_remediation.plan_budget_contract.assess_funding_budget",
+                    side_effect=AssertionError("M1 evaluated before binding gates")):
+                output = self.reject(e=e, b=b, reason=reason, status=status)
+                self.assertEqual(output.reasons, (reason,))
+
     def test_each_tampered_envelope_metadata_type_is_rejected_before_comparison(self):
         class Foreign:
             def __eq__(self, other):
