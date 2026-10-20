@@ -54,7 +54,8 @@ class ConfigurationTests(unittest.TestCase):
         self.assertEqual(r.risk_clearance,"NOT CLEARED")
         with self.assertRaises(FrozenInstanceError):r.symbols=("SOLUSDT",)
         with self.assertRaises(TypeError):Recipe(symbols=("SOLUSDT",))
-        with self.assertRaises(ValueError):replace(r,feature_names=("new",))
+        # dataclasses.replace uses TypeError for init=False fields on Python 3.14+.
+        with self.assertRaises((ValueError, TypeError)):replace(r,feature_names=("new",))
 
     def test_strict_inactive_symbol_refusal(self):
         for symbol in ("SOLUSDT","BNBUSDT","XRPUSDT","BTCUSD","btcusdt"):

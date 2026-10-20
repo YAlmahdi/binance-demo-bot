@@ -1,11 +1,28 @@
 """Inert split/transform contracts. No split construction, scaler fitting or models."""
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 import hashlib
 import json
 import math
 from .config import FEATURES, HOUR, HORIZON, SYMBOLS, BtcEthEncoder, timestamp, require_symbol
 from .features import FeatureRow
+
+
+def _finite_binary_number(value):
+    """Match the float feature contract without implicit Decimal/foreign coercion."""
+    if type(value) not in (int, float):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
+def _valid_feature_numbers(row):
+    return (type(row.values) is tuple and len(row.values) == len(FEATURES)
+            and all(_finite_binary_number(x) for x in row.values)
+            and _finite_binary_number(row.atr14))
+
 
 def ids_hash(ids):
     values = tuple(ids)
@@ -132,15 +149,100 @@ class TransformContract:
     feature_names: tuple[str, ...] = FEATURES
 
     def __post_init__(self):
+        if type(self.receipt) is not TrainingReceipt:
+            raise ValueError("Explicit synthetic training receipt required")
         for name in ("lower", "upper", "mean", "scale", "feature_names"):
             object.__setattr__(self, name, tuple(getattr(self, name)))
         if (self.feature_names != FEATURES or
                 any(len(getattr(self,n)) != 8 for n in ("lower","upper","mean","scale"))):
             raise ValueError("Exactly eight continuous inputs plus unchanged symbol flag")
-        if any(isinstance(x,bool) or not math.isfinite(x) for n in ("lower","upper","mean","scale") for x in getattr(self,n)):
-            raise ValueError("Finite transform metadata required")
+        if any(not _finite_binary_number(x) for n in ("lower","upper","mean","scale") for x in getattr(self,n)):
+            raise ValueError("Finite builtin int/float transform metadata required")
         if any(a>b or not a<=c<=b or d<=0 for a,b,c,d in zip(self.lower,self.upper,self.mean,self.scale)):
-            raise ValueError("Invalid bounds/mean/scale; constant-scale fitting policy deferred")
+            raise ValueError("Invalid bounds/mean/scale")
+        if any(a == b and (mu != a or scale != 1)
+               for a, b, mu, scale in zip(self.lower, self.upper, self.mean, self.scale)):
+            raise ValueError("Exact constant features require mean=constant and scale=1")
+
+
+@dataclass(frozen=True)
+class TrainingStatisticsCheck:
+    """Internal consistency only; never a fitted transform or authority token."""
+    status: str
+    reasons: tuple[str, ...] = ()
+    evidence: str = field(default="SYNTHETIC_ONLY", init=False)
+    authority: str = field(default="INERT_VALIDATION_ONLY", init=False)
+
+    def __post_init__(self):
+        object.__setattr__(self, "reasons", tuple(self.reasons))
+        if (self.status not in ("CONSISTENT", "INSUFFICIENT", "INVALID")
+                or (self.status == "CONSISTENT") != (not self.reasons)):
+            raise ValueError("Explicit statistics-check status/reasons required")
+
+    def __bool__(self):
+        raise TypeError("Inspect status explicitly; this diagnostic grants no authority")
+
+
+def check_training_statistics(rows, contract, expected_training_receipt):
+    """Check supplied statistics against supplied synthetic training vectors only.
+
+    Recomputes two-pass population reference values for comparison, without
+    returning statistics, constructing a scaler, fitting a model or scoring rows.
+    Exact binary-float equality is required: no tolerance or alternate convention
+    is tried. A future estimator must declare the same finite accumulation order.
+    Receipt claims cannot authenticate source data, causal construction or paired
+    financial-label validity; those remain separate prerequisites.
+    """
+    def invalid(reason):
+        return TrainingStatisticsCheck("INVALID", (reason,))
+
+    if (type(rows) not in (tuple, list) or type(contract) is not TransformContract
+            or type(expected_training_receipt) is not TrainingReceipt):
+        return invalid("INVALID_SCHEMA")
+    try:
+        if type(contract.receipt) is not TrainingReceipt:
+            return invalid("INVALID_SCHEMA")
+        # Revalidate supplied contracts, including manually altered frozen records.
+        receipt = replace(expected_training_receipt,
+                          window=replace(expected_training_receipt.window))
+        checked = replace(contract, receipt=replace(contract.receipt))
+        if checked.receipt != receipt:
+            return invalid("TRAINING_RECEIPT_MISMATCH")
+        captured = tuple(rows)
+        if not captured:
+            return TrainingStatisticsCheck("INSUFFICIENT", ("EMPTY_TRAINING_ROWS",))
+        if any(type(row) is not FeatureRow for row in captured):
+            return invalid("INVALID_FEATURE_ROW")
+        if any(row.status != "READY" or not _valid_feature_numbers(row) for row in captured):
+            return invalid("INVALID_ADMITTED_TRAINING_ROW")
+        captured = tuple(replace(row) for row in captured)
+        intervals = tuple(IntervalRow(row.symbol, row.decision_time,
+                                      row.decision_time + 1 + HORIZON) for row in captured)
+        validate_partition(intervals, (), receipt.window)
+        if tuple(row.row_id for row in captured) != receipt.row_ids:
+            return invalid("TRAINING_ROW_IDENTITY_OR_ORDER_MISMATCH")
+        if sample_gate(intervals, "train")["status"] != "SUFFICIENT":
+            return TrainingStatisticsCheck("INSUFFICIENT", ("TRAINING_SAMPLE_MINIMUM",))
+        reasons = []
+        for j, name in enumerate(FEATURES[:8]):
+            values = tuple(row.values[j] for row in captured)
+            lower, upper = min(values), max(values)
+            if lower == upper:
+                mean, scale = lower, 1.
+            else:
+                mean = math.fsum(values) / len(values)
+                variance = math.fsum((x - mean) ** 2 for x in values) / len(values)
+                if not math.isfinite(variance) or variance <= 0:
+                    return invalid("NONFINITE_OR_ZERO_NONCONSTANT_VARIANCE")
+                scale = math.sqrt(variance)
+            if not math.isfinite(mean) or not math.isfinite(scale):
+                return invalid("NONFINITE_STATISTICS")
+            if (lower, upper, mean, scale) != (
+                    checked.lower[j], checked.upper[j], checked.mean[j], checked.scale[j]):
+                reasons.append(name + ":STATISTICS_MISMATCH")
+        return TrainingStatisticsCheck("INVALID" if reasons else "CONSISTENT", tuple(reasons))
+    except (ValueError, TypeError, OverflowError, AttributeError):
+        return invalid("INVALID_CONTRACT_OR_NUMERIC_INPUT")
 
 @dataclass(frozen=True)
 class TransformResult:
@@ -153,6 +255,8 @@ def apply_transform(row, contract, expected_training_receipt):
     if contract.receipt != expected_training_receipt:
         raise ValueError("Wrong fold's training provenance")
     if row.status != "READY":
+        return TransformResult("DATA_QUALITY", (), None)
+    if not _valid_feature_numbers(row):
         return TransformResult("DATA_QUALITY", (), None)
     if row.values[-1] != BtcEthEncoder().encode(row.symbol):
         raise ValueError("Symbol indicator schema mismatch")
