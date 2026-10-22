@@ -9,11 +9,11 @@ from .features import FeatureRow
 
 
 def _finite_binary_number(value):
-    """Match the float feature contract without implicit Decimal/foreign coercion."""
+    """Finite binary floats, or integers exactly representable in that domain."""
     if type(value) not in (int, float):
         return False
     try:
-        return math.isfinite(value)
+        return math.isfinite(value) and (type(value) is float or float(value) == value)
     except OverflowError:
         return False
 
@@ -183,64 +183,108 @@ class TrainingStatisticsCheck:
         raise TypeError("Inspect status explicitly; this diagnostic grants no authority")
 
 
-def check_training_statistics(rows, contract, expected_training_receipt):
-    """Check supplied statistics against supplied synthetic training vectors only.
+def _capture_training_population(rows, receipt, expected_training_receipt):
+    """Shared, owned synthetic population preflight; no statistics before acceptance."""
+    def rejected(status, reason):
+        return (), None, TrainingStatisticsCheck(status, (reason,))
 
-    Recomputes two-pass population reference values for comparison, without
-    returning statistics, constructing a scaler, fitting a model or scoring rows.
-    Exact binary-float equality is required: no tolerance or alternate convention
-    is tried. A future estimator must declare the same finite accumulation order.
-    Receipt claims cannot authenticate source data, causal construction or paired
-    financial-label validity; those remain separate prerequisites.
-    """
-    def invalid(reason):
-        return TrainingStatisticsCheck("INVALID", (reason,))
-
-    if (type(rows) not in (tuple, list) or type(contract) is not TransformContract
+    if (type(rows) not in (tuple, list) or type(receipt) is not TrainingReceipt
             or type(expected_training_receipt) is not TrainingReceipt):
-        return invalid("INVALID_SCHEMA")
+        return rejected("INVALID", "INVALID_SCHEMA")
     try:
-        if type(contract.receipt) is not TrainingReceipt:
-            return invalid("INVALID_SCHEMA")
-        # Revalidate supplied contracts, including manually altered frozen records.
-        receipt = replace(expected_training_receipt,
-                          window=replace(expected_training_receipt.window))
-        checked = replace(contract, receipt=replace(contract.receipt))
-        if checked.receipt != receipt:
-            return invalid("TRAINING_RECEIPT_MISMATCH")
+        if (type(receipt.window) is not DevelopmentWindow
+                or type(expected_training_receipt.window) is not DevelopmentWindow):
+            return rejected("INVALID", "INVALID_SCHEMA")
+        expected = replace(expected_training_receipt,
+                           window=replace(expected_training_receipt.window))
+        receipt = replace(receipt, window=replace(receipt.window))
+        if receipt != expected:
+            return rejected("INVALID", "TRAINING_RECEIPT_MISMATCH")
         captured = tuple(rows)
         if not captured:
-            return TrainingStatisticsCheck("INSUFFICIENT", ("EMPTY_TRAINING_ROWS",))
+            return rejected("INSUFFICIENT", "EMPTY_TRAINING_ROWS")
         if any(type(row) is not FeatureRow for row in captured):
-            return invalid("INVALID_FEATURE_ROW")
+            return rejected("INVALID", "INVALID_FEATURE_ROW")
         if any(row.status != "READY" or not _valid_feature_numbers(row) for row in captured):
-            return invalid("INVALID_ADMITTED_TRAINING_ROW")
+            return rejected("INVALID", "INVALID_ADMITTED_TRAINING_ROW")
         captured = tuple(replace(row) for row in captured)
         intervals = tuple(IntervalRow(row.symbol, row.decision_time,
                                       row.decision_time + 1 + HORIZON) for row in captured)
         validate_partition(intervals, (), receipt.window)
         if tuple(row.row_id for row in captured) != receipt.row_ids:
-            return invalid("TRAINING_ROW_IDENTITY_OR_ORDER_MISMATCH")
+            return rejected("INVALID", "TRAINING_ROW_IDENTITY_OR_ORDER_MISMATCH")
         if sample_gate(intervals, "train")["status"] != "SUFFICIENT":
-            return TrainingStatisticsCheck("INSUFFICIENT", ("TRAINING_SAMPLE_MINIMUM",))
+            return rejected("INSUFFICIENT", "TRAINING_SAMPLE_MINIMUM")
+        return captured, receipt, TrainingStatisticsCheck("CONSISTENT")
+    except (ValueError, TypeError, OverflowError, AttributeError, PermissionError):
+        return rejected("INVALID", "INVALID_CONTRACT_OR_NUMERIC_INPUT")
+
+
+class _StatisticsError(ValueError):
+    """Fixed numerical diagnostics shared by estimation and validation."""
+
+
+def _population_statistics(captured):
+    """Documented two-pass fsum statistics; only called after population preflight.
+
+    Binary-float rounding is intrinsic. Reject nonzero-to-zero underflow in the
+    mean, squared deviations and variance rather than silently removing terms.
+    """
+    columns = []
+    for j in range(8):
+        values = tuple(row.values[j] for row in captured)
+        lower, upper = min(values), max(values)
+        if lower == upper:
+            mean, scale = lower, 1.
+        else:
+            total = math.fsum(values)
+            mean = total / len(values)
+            if total != 0 and mean == 0:
+                raise _StatisticsError("NUMERIC_UNDERFLOW")
+            squares = []
+            for x in values:
+                delta = x - mean
+                square = delta ** 2
+                if delta != 0 and square == 0:
+                    raise _StatisticsError("NUMERIC_UNDERFLOW")
+                squares.append(square)
+            variance = math.fsum(squares) / len(values)
+            if not math.isfinite(variance) or variance <= 0:
+                raise _StatisticsError("NONFINITE_OR_ZERO_NONCONSTANT_VARIANCE")
+            scale = math.sqrt(variance)
+        if not math.isfinite(mean) or not math.isfinite(scale):
+            raise _StatisticsError("NONFINITE_STATISTICS")
+        columns.append((lower, upper, mean, scale))
+    return tuple(tuple(column[i] for column in columns) for i in range(4))
+
+
+def check_training_statistics(rows, contract, expected_training_receipt):
+    """Check supplied metadata using the shared owned population and arithmetic.
+
+    Exact binary-float equality is required, with no tolerance or alternate
+    convention. This does not authenticate sources, upstream causal construction
+    or financially valid paired labels, and emits no estimated statistics.
+    """
+    def invalid(reason):
+        return TrainingStatisticsCheck("INVALID", (reason,))
+
+    if type(contract) is not TransformContract:
+        return invalid("INVALID_SCHEMA")
+    try:
+        checked = replace(contract)
+        captured, _, check = _capture_training_population(
+            rows, checked.receipt, expected_training_receipt)
+        if check.status != "CONSISTENT":
+            return check
+        lower, upper, mean, scale = _population_statistics(captured)
         reasons = []
         for j, name in enumerate(FEATURES[:8]):
-            values = tuple(row.values[j] for row in captured)
-            lower, upper = min(values), max(values)
-            if lower == upper:
-                mean, scale = lower, 1.
-            else:
-                mean = math.fsum(values) / len(values)
-                variance = math.fsum((x - mean) ** 2 for x in values) / len(values)
-                if not math.isfinite(variance) or variance <= 0:
-                    return invalid("NONFINITE_OR_ZERO_NONCONSTANT_VARIANCE")
-                scale = math.sqrt(variance)
-            if not math.isfinite(mean) or not math.isfinite(scale):
-                return invalid("NONFINITE_STATISTICS")
-            if (lower, upper, mean, scale) != (
+            if (lower[j], upper[j], mean[j], scale[j]) != (
                     checked.lower[j], checked.upper[j], checked.mean[j], checked.scale[j]):
                 reasons.append(name + ":STATISTICS_MISMATCH")
         return TrainingStatisticsCheck("INVALID" if reasons else "CONSISTENT", tuple(reasons))
+    except _StatisticsError as error:
+        return invalid(str(error))
     except (ValueError, TypeError, OverflowError, AttributeError):
         return invalid("INVALID_CONTRACT_OR_NUMERIC_INPUT")
 
