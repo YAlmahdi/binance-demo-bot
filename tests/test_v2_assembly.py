@@ -1,5 +1,5 @@
 """Invented constant candles; no labels or simulator."""
-from dataclasses import replace
+from dataclasses import fields, replace
 from functools import lru_cache
 from decimal import Decimal
 import hashlib
@@ -141,7 +141,12 @@ class AssemblyTests(unittest.TestCase):
             self.assertIsNone(assemble(d).payload)
         with self.assertRaises(ValueError):Result('INVALID',('bad',),object())
         payload=Payload(b'', '', (), (), (), ())
-        with self.assertRaises(ValueError):replace(payload,training_readiness='AUTHORIZED')
+        before=tuple(getattr(payload,f.name) for f in fields(payload))
+        # Python 3.12 uses ValueError; 3.14 uses TypeError for this init=False field.
+        with self.assertRaises((ValueError,TypeError)):
+            replace(payload,training_readiness='AUTHORIZED')
+        self.assertEqual(payload.training_readiness,'UNVERIFIED')
+        self.assertEqual(tuple(getattr(payload,f.name) for f in fields(payload)),before)
         d=fixture()
         self.assertIsNone(assemble(replace(d,sources=(replace(d.sources[0],identity=123),d.sources[1]))).payload)
         broken=replace(d.budgets);object.__delattr__(broken,'rows')
