@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Offline bot development UI prototype. Fictional MOCK DATA only.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src 'none'; font-src 'none'; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Futures AI Lab · Project Health · MOCK DATA</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="mock-data.js" defer></script>
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main" dir="ltr">Skip to content</a>
+  <aside class="sidebar" aria-label="Primary navigation">
+    <a class="brand" href="#health"><span class="brand-mark" aria-hidden="true">F</span><span><b dir="ltr">Futures AI Lab</b><small dir="ltr">Bot Development</small></span></a>
+    <div class="rail-label">PROJECT CONTROL</div>
+    <nav>
+      <a href="#health" dir="ltr"><span aria-hidden="true">◈</span> Project Health</a>
+      <a href="#roadmap" dir="ltr"><span aria-hidden="true">◇</span> Development Roadmap</a>
+      <a href="#current" dir="ltr"><span aria-hidden="true">◉</span> Current Milestone</a>
+      <a href="#latest" dir="ltr"><span aria-hidden="true">⌘</span> Latest Codex Update</a>
+      <a href="#decision" dir="ltr"><span aria-hidden="true">◎</span> Next Decision</a>
+    </nav>
+    <div class="sidebar-note"><span class="offline-dot" aria-hidden="true"></span><strong dir="ltr">Offline · Read Only</strong><p lang="ar" dir="rtl">نموذج لفهم تطوّر البوت.<br>لا اتصال، ولا تشغيل.</p><span class="mono">UI PROTOTYPE / v2</span></div>
+  </aside>
+  <div class="workspace">
+    <header class="topbar"><span dir="ltr">Workspace <span class="crumb" aria-hidden="true">/</span> <strong>Bot Readiness</strong></span><span class="badge neutral" dir="ltr">DEMO ONLY · UI</span></header>
+    <main id="main" tabindex="-1">
+      <div class="mock-banner" role="note"><span class="mock-tag" dir="ltr">MOCK DATA</span><span lang="ar" dir="rtl"><strong>كل الحالات والأدلة والتواريخ هنا خيالية.</strong> هذا تصميم فقط، وليس متصلًا بـ Codex أو GitHub أو أي حالة فعلية للمشروع.</span></div>
+      <div id="data-error" class="error" role="alert" hidden></div>
+      <noscript><p class="error" lang="ar" dir="rtl">يلزم JavaScript محلي لعرض العينة الخيالية. لا يوجد مصدر بديل أو اتصال خارجي.</p></noscript>
+      <section id="health" class="section primary-section" aria-labelledby="health-title">
+        <div class="overview"><div><p class="eyebrow">BOT DEVELOPMENT / READINESS OVERVIEW</p><h1 id="health-title">Project Health<span class="title-dot">.</span></h1><p class="intro" lang="ar" dir="rtl">أين وصل بناء البوت؟ ما الذي اختُبر، وما الذي ما زال يحتاج دليلًا؟ كل جانب له حالته وحدوده.</p></div><div class="overview-stamp"><span class="stamp-symbol" aria-hidden="true">◈</span><b dir="ltr">EVIDENCE FIRST</b><span lang="ar" dir="rtl">بدون نسبة تقدم وهمية</span></div></div>
+        <div id="freshness-data" class="freshness" aria-label="Mock evidence freshness"></div>
+        <div class="evidence-note" lang="ar" dir="rtl">نجاح الاختبارات دليل هندسي ضمن حدودها؛ لا يثبت دقة AI أو الربحية أو أمان التشغيل.</div>
+        <div id="health-grid" class="health-grid"></div>
+      </section>
+      <section id="roadmap" class="panel roadmap" aria-labelledby="roadmap-title"><div class="panel-heading"><div><p class="eyebrow">ENGINEERING → RESEARCH → VALIDATION → READINESS</p><h2 id="roadmap-title">Development Roadmap</h2></div><span class="badge neutral" dir="ltr">MOCK MILESTONES</span></div><p class="section-description" lang="ar" dir="rtl">ملخص جاهزية لكل مرحلة، ثم حالة المكوّن قبل تفاصيل خطواته. كل ما هنا خيالي؛ لا انتقال تلقائي.</p><div id="roadmap-list" class="roadmap-list"></div></section>
+      <div class="content-grid">
+        <section id="current" class="panel current" aria-labelledby="current-title"><div class="panel-heading"><div><p class="eyebrow">ACTIVE DEVELOPMENT AREA</p><h2 id="current-title">Current Milestone</h2></div><span class="badge active" dir="ltr">MOCK · ACTIVE</span></div><div id="current-data"></div></section>
+        <section id="latest" class="panel" aria-labelledby="latest-title"><div class="panel-heading"><div><p class="eyebrow">CHANGE &amp; IMPACT</p><h2 id="latest-title">Latest Codex Update</h2></div><span class="badge purple" dir="ltr">MOCK UPDATE</span></div><div id="latest-data"></div></section>
+      </div>
+      <section id="decision" class="panel decision" aria-labelledby="decision-title"><div class="decision-label" dir="ltr"><span aria-hidden="true">◎</span> ONE PROPOSED DECISION</div><h2 id="decision-title">Next Decision</h2><div id="decision-data"></div><div class="decision-foot" lang="ar" dir="rtl">للعرض فقط • لا موافقة أو تنفيذ من هذه الواجهة</div></section>
+      <footer><span dir="ltr">Futures AI Lab · Project Control</span><span dir="ltr">MOCK DATA · Offline · No automatic refresh</span></footer>
+    </main>
+  </div>
+</body>
+</html>
