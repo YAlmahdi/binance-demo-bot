@@ -112,7 +112,10 @@ def _plain_input(value, depth=0):
     if type(value) is tuple:
         return all(_plain_input(v, depth + 1) for v in value)
     if type(value) in _INPUT_TYPES:
-        return all(_plain_input(getattr(value, f.name), depth + 1) for f in fields(value))
+        try:
+            return all(_plain_input(getattr(value, f.name), depth + 1) for f in fields(value))
+        except AttributeError:
+            return False
     return False
 
 
