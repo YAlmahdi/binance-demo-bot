@@ -98,6 +98,31 @@ class FeatureTests(unittest.TestCase):
         bars[215]=candle(215,volume=200)
         self.assertAlmostEqual(feature_at(series(bars=bars),DECISION).values[7],math.log(3))
 
+    def test_prior_volume_overflow_abstains_without_usable_features(self):
+        bars=[candle(i) for i in range(270)]
+        for i in range(195,215):
+            bars[i]=replace(bars[i],volume=1e308)
+        supplied=series(bars=bars)
+        before=repr(supplied)
+        out=feature_at(supplied,DECISION)
+        self.assertEqual((out.status,out.reason),("DATA_QUALITY","NONFINITE_FEATURE"))
+        self.assertIsNone(out.values)
+        self.assertIsNone(out.atr14)
+        self.assertEqual(out,feature_at(supplied,DECISION))
+        self.assertEqual(repr(supplied),before)
+
+    def test_large_representable_volume_preserves_ratio_and_future_isolation(self):
+        volume=2.0**1000
+        bars=[candle(i,volume=volume) for i in range(270)]
+        supplied=series(bars=bars)
+        expected=feature_at(series(),DECISION)
+        self.assertEqual(feature_at(supplied,DECISION),expected)
+        # Future overflow-sized values must not enter the prior-20 denominator.
+        future=supplied.observations[:216]+tuple(
+            replace(v,candle=replace(v.candle,volume=1e308))
+            for v in supplied.observations[216:])
+        self.assertEqual(feature_at(replace(supplied,observations=future),DECISION),expected)
+
     def test_body_definition_uses_close_denominator(self):
         bars=[candle(i) for i in range(270)]
         bars[215]=replace(bars[215],open=99.8)

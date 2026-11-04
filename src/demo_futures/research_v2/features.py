@@ -90,11 +90,11 @@ def feature_at(series, decision_time):
     current = bars[-1]
     if current.volume <= 0 or current.high == current.low:
         return rejected("DATA_QUALITY", "ZERO_VOLUME_OR_RANGE_DECISION")
-    prior_volume = statistics.fmean(c.volume for c in bars[-21:-1])
-    if prior_volume <= 0:
-        return rejected("DATA_QUALITY", "NONPOSITIVE_PRIOR_VOLUME")
     closes = [c.close for c in bars]
     try:
+        prior_volume = statistics.fmean(c.volume for c in bars[-21:-1])
+        if prior_volume <= 0:
+            return rejected("DATA_QUALITY", "NONPOSITIVE_PRIOR_VOLUME")
         returns = [math.log(closes[i] / closes[i - 1]) for i in range(len(closes) - 48, len(closes))]
         atr14 = atr(bars, 14)[-1]  # Frozen Wilder seed, full supplied contiguous prefix.
         values = tuple(math.log(closes[-1] / closes[-1 - n]) for n in (1, 12, 48)) + (
