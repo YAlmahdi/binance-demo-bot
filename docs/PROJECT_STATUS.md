@@ -1,5 +1,15 @@
 # Futures AI Lab — Project Status
 
+## V2/HYBRID historical-loader design specification — 2026-11-08
+
+**DOCUMENTED / DESIGN COMPLETE; HISTORICAL LOADER NOT IMPLEMENTED.** [Design specification](RESEARCH_V2_HISTORICAL_LOADER_DESIGN.md) defines the existing strict synthetic as-of contract and an inactive exploratory approximation, an independent 48-bar coverage diagnostic with a separate audit cutoff, the fixed full ATR prefix and fail-closed gap policy, and the authorization and provenance template. It maps compatibility with the current synthetic interfaces and lists 15 invented acceptance scenarios for a later engineering batch.
+
+**Verification scope:** static comparison against the frozen V2/HYBRID plans and the source, feature, boundary, partition, authorization/query and funding interfaces at the reference baseline `02d823254e580fb9b7b2e260c495a04ce71ce6ab`. The acceptance matrix is proposed. Application tests, historical inputs and research evaluation were outside this design milestone.
+
+**Open gates:** immutable source and revision authority, allowed queries and resource budgets, actual ATR origin, original receipts and next-open feasibility, realism evidence and independently complete funding remain unverified. Funding UNKNOWN never becomes zero. The no-settlement financial bridge stays disabled. Historical folds and actual F/C/A/Q remain PENDING. BTCUSDT/ETHUSDT only. Five funding findings UNRESOLVED; aggregate stress BLOCKED; M8 NOT READY; RISK NOT CLEARED.
+
+**One next approval decision:** authorize the bounded synthetic-only validation batch in the specification. It covers strict receipts, pinned prefix verification and a separately bound 48-bar diagnostic. Approximation activation, real storage, labels, fitting, evaluation and execution remain separately gated.
+
 ## V2/HYBRID synthetic historical-loader readiness — 2026-11-04
 
 **IMPLEMENTED / TESTED: bounded synthetic engineering only; Real Historical Loader NOT IMPLEMENTED / BLOCKED.** Starting local main and verified remote main equal `fc3e9a8269b16b911c1956d6716e68dd1375694a`; starting index empty. PUBLIC destination remains unchanged. No restricted payload, saved funding report, account record or credential was opened. No Binance API request, database query, historical loading, simulation, label generation, model fitting, financial evaluation or order operation occurred. No packages or market data were downloaded. No five-finding producer investigation was repeated.
