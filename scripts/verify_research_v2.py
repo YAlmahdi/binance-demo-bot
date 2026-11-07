@@ -23,6 +23,7 @@ ENGINEERING_SUITES = (
     "test_v2_assembly", "test_v2_eligibility", "test_v2_pipeline_regression",
     "test_v2_engineering_runner",
     "test_v2_loader_readiness",
+    "test_v2_historical_validators",
 )
 
 def guard_for(report, *, event_log=None, allow_report_writes=True):

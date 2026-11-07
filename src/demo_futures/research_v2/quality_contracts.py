@@ -23,6 +23,18 @@ class QualityAssessment:
     market_realism: str = field(default="UNKNOWN / NOT CERTIFIED", init=False)
 
 
+def documentary_flags(index, candle):
+    """Documentary flags for a structurally valid candle."""
+    flags = []
+    if candle.volume == 0:
+        flags.append(CandleFlag(index, "ZERO_VOLUME_REVIEW"))
+    if candle.high == candle.low:
+        flags.append(CandleFlag(index, "FLAT_BAR_REVIEW"))
+    if (candle.high - candle.low) / candle.close > .05:
+        flags.append(CandleFlag(index, "RANGE_GT_5_PERCENT_REVIEW_ONLY"))
+    return tuple(flags)
+
+
 def assess_candles(series, decision_time):
     """Quality over supplied observations; causal channel uses frozen feature_at only."""
     if type(series) is not SyntheticSeries or series.evidence != "SYNTHETIC_ONLY":
@@ -54,12 +66,7 @@ def assess_candles(series, decision_time):
                 missing.append("CANDLE_GAP")
                 flags.append(CandleFlag(i, "DISCONTINUOUS"))
         previous = c.open_time
-        if c.volume == 0:
-            flags.append(CandleFlag(i, "ZERO_VOLUME_REVIEW"))
-        if c.high == c.low:
-            flags.append(CandleFlag(i, "FLAT_BAR_REVIEW"))
-        if (c.high - c.low) / c.close > .05:
-            flags.append(CandleFlag(i, "RANGE_GT_5_PERCENT_REVIEW_ONLY"))
+        flags.extend(documentary_flags(i, c))
     if not series.observations:
         missing.append("CANDLE_GAP")
     try:
