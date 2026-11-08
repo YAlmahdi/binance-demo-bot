@@ -1,5 +1,29 @@
 # Futures AI Lab — Project Status
 
+## V2 provenance readiness and final-source regression — 2026-11-08
+
+**TESTED / DOCUMENTED.** Ran the complete engineering-only allowlist on byte-verified published Python sources and tests at `0caa5e0cdc10c53e08f26734cef5f6be9594605a`. The isolated snapshot contained 115 tracked Python blobs and no saved payloads. The initial export omitted three imported verifier helpers. That attempt was stopped after guard-test import errors. The final snapshot included the exact committed helpers. No validator or test source change was required. No separate focused test rerun or M1–M7 audit was conducted.
+
+| Python runtime | Unique tests passed | Failures | Errors | Skips | Recorded prohibited events | Elapsed |
+|---|---:|---:|---:|---:|---:|---:|
+| 3.12.14 | 378 | 0 | 0 | 0 | 0 | 814.102s |
+| 3.14.7 | 378 | 0 | 0 | 0 | 0 | 759.978s |
+
+Both report-free runs exited zero. The final S1 test passed in both and checks that rejected protected timestamps never reach candle-value inspection. The existing guard prevented restricted access paths and patched label and simulator entry points. No Binance, database, label, simulation or order operation ran. Publication verification of the source baseline was independent of these local runs.
+
+| Source or test file | Verified published Git blob |
+|---|---|
+| `src/demo_futures/research_v2/historical_scope.py` | `e43445c0f76e0241aa95881a0591cd83864c78fb` |
+| `src/demo_futures/research_v2/pinned_prefix.py` | `c58da30c1430fa1692911cf130ef90b97218c5bd` |
+| `src/demo_futures/research_v2/horizon_coverage.py` | `311f6680741e1bd296ba3c7294dbebeb5c2b6da7` |
+| `src/demo_futures/research_v2/quality_contracts.py` | `4a07eb3f1ed48dd0116f6cec0c84a3f2b172f8bd` |
+| `tests/test_v2_historical_validators.py` | `c75036e12e13e10b6e550821af5be03ad359e495` |
+| `scripts/verify_research_v2.py` | `c61008aa01537bb66487df797a07c1a98203f95e` |
+
+**Provenance.** [Authorization manifest template](RESEARCH_V2_PROVENANCE_MANIFEST_TEMPLATE.md) separates verified design constraints, documentary inventory claims, missing authority and blocked access. The prior bounded inventory establishes neither current permission nor an immutable, physically isolated snapshot. The actual custodian, object/version, revision, schema mapping, exact approved UTC slices, ATR origin, independent original receipts, isolation and read budget remain pending. No market, funding or protected payload was opened or hashed. The real loader remains NOT IMPLEMENTED. Funding UNKNOWN and the disabled no-settlement bridge remain in place. F/C/A/Q PENDING. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. RISK NOT CLEARED.
+
+**One next approval decision:** approve a metadata-only review of one authenticated custodian package for an exact, isolated BTCUSDT/ETHUSDT 5-minute snapshot. Payload access would still require separate approval.
+
 ## V2/HYBRID synthetic historical boundary validators — 2026-11-08
 
 **IMPLEMENTED / TESTED, synthetic only.** On published baseline `ab73739361fe9168e33cd4fa5881d4b37de14645`, added `historical_scope.py`, `pinned_prefix.py` and `horizon_coverage.py` under `src/demo_futures/research_v2/`. Typed single-slice approvals preflight exact source, snapshot, revision, BTCUSDT/ETHUSDT symbol, 5m projection, authorized UTC grid, protected overlap, lifecycle and bounded rows before inspecting candles. Strict prefix validation uses exact-version original receipt declarations and a separately pinned origin. It preserves the existing 200-bar warm-up and Wilder ATR14. The existing flag checks were extracted unchanged in `quality_contracts.py` for both validation paths. Retrieval cannot substitute for original availability. Next-open feasibility remains UNVERIFIED. The existing approximation vocabulary remains inactive.
