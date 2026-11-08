@@ -1,5 +1,23 @@
 # Futures AI Lab — Project Status
 
+## V2/HYBRID isolated synthetic approximation diagnostic — 2026-11-08
+
+**IMPLEMENTED / TESTED, synthetic diagnostic only.** `src/demo_futures/research_v2/exploratory_approximation.py` accepts an explicitly approximation-scoped invented grant, a pinned five-minute BTCUSDT/ETHUSDT prefix, ordered row-version digests and a separate evidence inventory digest. It returns a dedicated assumption diagnostic and deterministic replay commitment. Missing original receipts remain UNKNOWN, known-late receipts or material corrections refuse the view, and contradictory evidence is invalid. The prefix is bounded by its approved origin and decision time. Protected timestamps fail before candle values are inspected. Existing structural checks, documentary quality flags and warm-up rules are reused. The diagnostic computes no features and constructs no observed-candle receipts. Next-open feasibility remains UNVERIFIED.
+
+**Isolation.** Existing strict preflight rules are reused as a private structural projection after both declarations explicitly request approximation. No strict availability or feature consumer is invoked by the diagnostic. The strict reference, scheduled opportunity denominator, 48-bar coverage, funding UNKNOWN and disabled no-settlement bridge remain intact. Synthetic evidence and digests establish internal consistency. External source authority, actual receipt timing and execution feasibility remain unverified. Historical access and operational approximation remain blocked.
+
+**Verification.** `tests/test_v2_exploratory_approximation.py` adds 12 tests and `scripts/verify_research_v2.py` adds one guarded suite entry. Focused checks passed 12/12 on both runtimes. The full report-free engineering-only suite ran on an isolated 117-file final-source snapshot and passed 390/390 unique tests on Python 3.12.14 (868.081s) and 3.14.7 (778.580s), with zero failures, errors, skips or recorded prohibited events. Fresh guarded processes agreed on reference diagnostic SHA-256 `6daec6d95ac46a891cc772aef6815a316e0e14dae024e2ec932b2d67a8086e65`. No historical payload, database, network request, simulator, label production or order operation was used in the guarded runs. Pre-existing local status edits are preserved and excluded from the task commit.
+
+| Tested source | Git blob |
+|---|---|
+| `src/demo_futures/research_v2/exploratory_approximation.py` | `6eb61973a7c7c6fb873ac5064f09c210f19161ee` |
+| `tests/test_v2_exploratory_approximation.py` | `c3d8151bc6bbe8b60fbba37c9b4093c500b70a67` |
+| `scripts/verify_research_v2.py` | `79f80a54f3745778eddad245c46c20a7198f1ce0` |
+
+**Remaining gates.** A real reader and operational approximation are NOT IMPLEMENTED. AI, strategy and risk behavior are unchanged. Training NOT PERFORMED. Predictive and financial performance NOT EVALUATED. F/C/A/Q PENDING. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. RISK NOT CLEARED.
+
+**One next approval decision:** approve metadata-only review of one authenticated custodian package for the exact isolated BTCUSDT/ETHUSDT snapshot. Payload access would still require separate approval.
+
 ## V2 provenance readiness and final-source regression — 2026-11-08
 
 **TESTED / DOCUMENTED.** Ran the complete engineering-only allowlist on byte-verified published Python sources and tests at `0caa5e0cdc10c53e08f26734cef5f6be9594605a`. The isolated snapshot contained 115 tracked Python blobs and no saved payloads. The initial export omitted three imported verifier helpers. That attempt was stopped after guard-test import errors. The final snapshot included the exact committed helpers. No validator or test source change was required. No separate focused test rerun or M1–M7 audit was conducted.

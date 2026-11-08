@@ -24,6 +24,7 @@ ENGINEERING_SUITES = (
     "test_v2_engineering_runner",
     "test_v2_loader_readiness",
     "test_v2_historical_validators",
+    "test_v2_exploratory_approximation",
 )
 
 def guard_for(report, *, event_log=None, allow_report_writes=True):
