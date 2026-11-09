@@ -1,5 +1,24 @@
 # Futures AI Lab — Project Status
 
+## V2 offline synthetic research workflow integration — 2026-11-09
+
+**IMPLEMENTED / TESTED, invented fixtures only.** Run `$env:PYTHONPATH='src'; python -B -m demo_futures.research_v2.research_fixture` from the repository root. The command emits deterministic JSON with 32 scheduled, causally ready slots and six eligible synthetic training IDs. The causal ledger retains every scheduled slot, including NO TRADE on a causal refusal. Causally ready rows are UNSCORED. The population receipt is separate and binds the pinned sources and origin, chronological window, full-horizon maturity, synthetic funding and paired-action evidence, ordered eligible IDs and per-slot exclusions. The sample gate is INSUFFICIENT on this fixture. Fit is always BLOCKED.
+
+**Boundary and defect correction.** `research_workflow.py` reuses strict prefix, partition, horizon and funding validators. It emits a distinct pre-fit receipt because the existing feature assembler requires a supplied transform and the association checker expects a complete inventory. It computes no transforms, payoffs, labels or scores. Overlapping synthetic funding claims initially passed independently despite a conflicting settlement inventory. The final workflow reconciles overlapping declared events under each pinned source and blocks pre-fit on a conflict while preserving the causal ledger. Missing and sealed outcomes, incomplete pairs and unsupported funding affect the dependent population only. No-settlement and approximation execution remain disabled.
+
+**Verification.** Fourteen focused tests passed on Python 3.12.14 and 3.14.7 after the correction. Full engineering-only no-report runs passed 404/404 unique tests on Python 3.12.14 (708.378s) and 3.14.7 (662.086s) in an isolated 120-file final-source snapshot. Zero failures, errors, skips or recorded prohibited events. Fresh fixture commands produced byte-identical JSON with stdout SHA-256 `2b10b91b9900237953d4b9a20f4b58d445a61cb8d3dd5bc58ca9aaeb04b77f3c` and population commitment `ee3e8931a3797f5274956db5532d16e51bcd7ba873214d5a070ea7cc69b75e13`. Existing local status bytes are preserved and older unpublished edits are excluded from the commit.
+
+| Tested source | Git blob |
+|---|---|
+| `src/demo_futures/research_v2/research_workflow.py` | `919d0731ad89851fe6a0fa1dbb4ba9bd6be174b6` |
+| `src/demo_futures/research_v2/research_fixture.py` | `1f2d81b428755afe610fe372b40cbb29cdcfd05d` |
+| `tests/test_v2_research_workflow.py` | `88b2a08077d9f53eedc278556dd05cbb96aad717` |
+| `scripts/verify_research_v2.py` | `10e12e300659eed709abf9b919b7abbd432ca321` |
+
+**Limits.** Real source authority, operational historical access and financially valid historical labels remain unverified or unimplemented. AI, strategy and risk behavior are unchanged. Training NOT PERFORMED. Predictive and financial performance NOT EVALUATED. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. F/C/A/Q PENDING. RISK NOT CLEARED.
+
+**One next approval decision:** approve metadata-only review of one authenticated custodian package for an exact isolated BTCUSDT/ETHUSDT snapshot. Payload access requires separate approval.
+
 ## V2/HYBRID isolated synthetic approximation diagnostic — 2026-11-08
 
 **IMPLEMENTED / TESTED, synthetic diagnostic only.** `src/demo_futures/research_v2/exploratory_approximation.py` accepts an explicitly approximation-scoped invented grant, a pinned five-minute BTCUSDT/ETHUSDT prefix, ordered row-version digests and a separate evidence inventory digest. It returns a dedicated assumption diagnostic and deterministic replay commitment. Missing original receipts remain UNKNOWN, known-late receipts or material corrections refuse the view, and contradictory evidence is invalid. The prefix is bounded by its approved origin and decision time. Protected timestamps fail before candle values are inspected. Existing structural checks, documentary quality flags and warm-up rules are reused. The diagnostic computes no features and constructs no observed-candle receipts. Next-open feasibility remains UNVERIFIED.
