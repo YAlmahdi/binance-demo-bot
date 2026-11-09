@@ -1,5 +1,23 @@
 # Futures AI Lab — Project Status
 
+## DEMO operational safety mock integration — 2026-11-10
+
+**IMPLEMENTED / TESTED, invented fixtures only.** From the repository root run `$env:PYTHONPATH='src'; python -B -m demo_futures.demo_safety_mock`. The deterministic trace covers startup, incomplete acknowledgments, disconnect and restart, daily-loss halt, protective rejection and emergency kill. The example ends with an unresolved rejected emergency close, exposure still present and operator intervention required.
+
+**Safety behavior.** Only a fresh, complete inventory bound to the current reconciliation request can restore trust. Pending action outcomes require explicit matching evidence. Exact replays emit no intent. Conflicting event IDs latch an integrity fault. The mock reuses the existing inclusive daily-loss rule and occupied-plus-pending cap. A later day still requires explicit operator resume with fresh, flat evidence. The in-memory restart snapshot retains pending actions, the event journal and safety latches. Kill is irreversible in this mock. It permits only reconciled entry cancellation followed by reduce-only closure, with fresh confirmation between steps. Rejected safety actions cannot be retried for the same target.
+
+**Verification.** All 17 focused tests passed on Python 3.12.14 and 3.14.7. The guarded engineering-only no-report suite passed 421/421 unique tests in an isolated 122-file final-source snapshot on Python 3.12.14 (710.211s) and 3.14.7 (666.841s), with zero failures, errors, skips or recorded prohibited events. An additional isolated replay denied environment and external operations and matched stdout SHA-256 `b4e962c465b80b5410713a322497295960a08c608464ac5e1afcf7aab1f0b2ea` on both runtimes. Older local status edits were preserved and excluded from the reviewed publication snapshot.
+
+| Tested source | Git blob |
+|---|---|
+| `src/demo_futures/demo_safety_mock.py` | `04ee6e01033eec4045b6f92f5962a62a017c2c57` |
+| `tests/test_v2_demo_safety_mock.py` | `63f147307e53e3f0c0051f42f015aa86b5baa01c` |
+| `scripts/verify_research_v2.py` | `ebde4625b6f6a53009e75849aa03cf0a21701be7` |
+
+**Limits.** Real exchange reconciliation, durable restart recovery, operator recovery and DEMO order handling remain unverified. AI, strategy and risk behavior are unchanged. Training NOT PERFORMED. Predictive and financial performance NOT EVALUATED. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. F/C/A/Q PENDING. RISK NOT CLEARED.
+
+**One next approval decision.** Approve a credential-free contract review for DEMO reconciliation and the operator recovery runbook before considering any execution adapter.
+
 ## V2 offline synthetic research workflow integration — 2026-11-09
 
 **IMPLEMENTED / TESTED, invented fixtures only.** Run `$env:PYTHONPATH='src'; python -B -m demo_futures.research_v2.research_fixture` from the repository root. The command emits deterministic JSON with 32 scheduled, causally ready slots and six eligible synthetic training IDs. The causal ledger retains every scheduled slot, including NO TRADE on a causal refusal. Causally ready rows are UNSCORED. The population receipt is separate and binds the pinned sources and origin, chronological window, full-horizon maturity, synthetic funding and paired-action evidence, ordered eligible IDs and per-slot exclusions. The sample gate is INSUFFICIENT on this fixture. Fit is always BLOCKED.
