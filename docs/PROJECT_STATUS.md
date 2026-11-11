@@ -1,5 +1,26 @@
 # Futures AI Lab — Project Status
 
+## DEMO reconciliation and operator recovery — 2026-11-11
+
+**IMPLEMENTED / TESTED, invented fixtures only.** The existing `python -B -m demo_futures.demo_safety_mock` command, with `PYTHONPATH=src`, rehearses partial evidence, interrupted closure, conflicting confirmations and separate confirmed-flat and rejected-close branches. Typed requests bind fixture identity, event cutoff, complete state commitment, account-version watermark and pending action. Atomic synthetic responses include positions, entry orders, protective-order identities, UTC daily equity declarations and matching action resolutions. Missing, stale, duplicate or cross-request evidence cannot release safety holds.
+
+**Recovery contracts.** Version-1 immutable snapshots require a separately pinned fixture checkpoint. Restore replays the ordered journal, verifies materialized state and fault records, retains latches and pending actions, and emits a disconnected restart with zero intentions. Operator reviews expose unresolved actions, exposure, rejected safety actions and confirmed flatness. Bound decisions support HOLD, entry cancellation, reduce-only close and eligible explicit RESUME. Kill remains irreversible. Known exposure cannot disappear without a matching outcome, and a rejected safety action cannot be retried for the same target.
+
+**Defect correction.** An adversarial regression demonstrated that the first checkpoint implementation omitted materialized safety fields from its checksum. All four altered-state subcases initially failed. The final commitment covers the complete state and journal, and restore rejects fields unsupported by replay. Daily-limit comparisons also use exact isolated Decimal arithmetic while reusing the existing risk guard and thresholds.
+
+**Verification.** All 31 focused tests passed on Python 3.12.14 and 3.14.7. The final guarded engineering-only no-report suite passed 435/435 unique tests on Python 3.12.14 (850.819s) and 3.14.7 (790.382s) in an isolated 122-file source snapshot. Final failures, errors, skips and recorded prohibited events were zero. Six synthetic guard callbacks were refused per runtime. The isolated demonstration denied environment and external operations and produced identical stdout SHA-256 `72d619251150aade75087e18f1448988ec5454e4235c9e5607e99c0f058f2dc2`. Existing verifier integration already includes the updated test module. Older local status edits are preserved and excluded from the reviewed publication snapshot.
+
+| Tested source | Git blob |
+|---|---|
+| `src/demo_futures/demo_safety_mock.py` | `5297ccb5da12f430ac6a8f34d46782ef2190d94f` |
+| `tests/test_v2_demo_safety_mock.py` | `f9184916897d12333c93d7bc54116237b6867360` |
+
+**Operator procedure and limits.** [Recovery runbook](DEMO_OPERATOR_RECOVERY_MOCK_RUNBOOK.md) documents exact steps and future gates. Caller-supplied checkpoints establish declared internal consistency. Independent authentication, latest-checkpoint custody, durable atomic recovery, coherent exchange observation timing, order/position-side mappings and authenticated operator authority remain unverified. The workflow consists solely of synthetic declarations and simulated intentions.
+
+AI, strategy and risk behavior UNCHANGED. Training NOT PERFORMED. Predictive and financial performance NOT EVALUATED. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. F/C/A/Q PENDING. RISK NOT CLEARED.
+
+**One next approval decision.** Approve one offline DEMO protocol-conformance batch using invented paginated account snapshots and streamed order events to test ordering, reconnect recovery and position-side mappings.
+
 ## DEMO operational safety mock integration — 2026-11-10
 
 **IMPLEMENTED / TESTED, invented fixtures only.** From the repository root run `$env:PYTHONPATH='src'; python -B -m demo_futures.demo_safety_mock`. The deterministic trace covers startup, incomplete acknowledgments, disconnect and restart, daily-loss halt, protective rejection and emergency kill. The example ends with an unresolved rejected emergency close, exposure still present and operator intervention required.
