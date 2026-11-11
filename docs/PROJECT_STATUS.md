@@ -1,5 +1,19 @@
 # Futures AI Lab — Project Status
 
+## DEMO protocol conformance and mock exit — 2026-11-11
+
+**IMPLEMENTED / TESTED.** Run `python -B -m demo_futures.demo_protocol_mock` with `PYTHONPATH=src`. The pure invented-protocol boundary validates bounded pagination, token continuity, request/snapshot identity, logical observation cutoffs, sequence coverage, account versions and declared position sides. It reuses the existing reconciliation state machine. The command emits structured PASS/BLOCKED JSON. Complete pagination, consistent side mappings and repeated acknowledgments pass. Missing, duplicate, changed or interrupted pages, stale or reordered events, missing outcomes, contradictory fills and inconsistent order inventories block dependent reconciliation.
+
+**Conservative limits and correction.** Partial fills and cancellations with nonzero fills remain BLOCKED. They require separately verified quantity-aware contracts before integration. An adversarial test demonstrated that a failed normalization could leave an earlier active state trusted. The corrected boundary records STALE while preserving pending actions and latches. Existing recovery tests cover rejected emergency closure, irreversible kill, daily loss and restart idempotency. No real protocol compatibility is established by these invented declarations.
+
+**Final verification.** Ten focused tests passed per runtime. The final guarded engineering-only no-report suite passed 445/445 unique tests on Python 3.12.14 (1634.362s) and 3.14.7 (1553.091s), with zero final failures, errors, skips or recorded prohibited events. The isolated final snapshot contained 124 verified Python files. Earlier source runs were superseded after corrections. Final source identities are `94e98ae70c06077dcf2e046f3bf871876ce9a94d` for the protocol module, `4a4fc8f91c2280a8d8b5d01c75cb20c68cb61260` for its tests and `9fd56e21cc7b96b41a2eec0fc001ce43ae8da7df` for the verifier. The command produced identical stdout on both runtimes with prohibited operations denied.
+
+**Mock engineering exit.** PASS for the bounded synthetic conformance scope. Real integration remains BLOCKED by independently authenticated account mode/protocol semantics, coherent stream/snapshot timing, durable checkpoint custody and explicit operational permission. Research requires authorized immutable source evidence, approved isolated UTC scope and ATR origin. Funding evidence and all five findings remain unresolved. This is the final planned mock-conformance batch.
+
+AI/strategy/risk UNCHANGED. Training NOT PERFORMED. Predictive/financial performance NOT EVALUATED. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. F/C/A/Q PENDING. RISK NOT CLEARED.
+
+**One next approval decision.** Approve metadata-only intake of one custodian-authorized immutable BTCUSDT/ETHUSDT historical snapshot package to establish actionable real-data access scope.
+
 ## DEMO reconciliation and operator recovery — 2026-11-11
 
 **IMPLEMENTED / TESTED, invented fixtures only.** The existing `python -B -m demo_futures.demo_safety_mock` command, with `PYTHONPATH=src`, rehearses partial evidence, interrupted closure, conflicting confirmations and separate confirmed-flat and rejected-close branches. Typed requests bind fixture identity, event cutoff, complete state commitment, account-version watermark and pending action. Atomic synthetic responses include positions, entry orders, protective-order identities, UTC daily equity declarations and matching action resolutions. Missing, stale, duplicate or cross-request evidence cannot release safety holds.

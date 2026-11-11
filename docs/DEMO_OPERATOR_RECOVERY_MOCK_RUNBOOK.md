@@ -1,5 +1,27 @@
 # DEMO reconciliation and operator recovery rehearsal
 
+## Invented protocol conformance command
+
+Run `python -B -m demo_futures.demo_protocol_mock` with `PYTHONPATH=src`.
+It emits deterministic JSON with a verdict and reason for complete, duplicate,
+interrupted, missing-event and cross-snapshot fixtures.
+
+The pure normalization boundary requires caller-declared finite page and row budgets,
+an exact complete token chain, one bound inventory across all pages, unique position
+identities and consistent declared ONE_WAY or HEDGE sides. Stream events must cover
+every sequence from the declared watermark through the observation cutoff and share
+the account version. Repeated acknowledgments at successive sequence numbers are
+accepted. Missing fills and contradictory terminal confirmations block normalization.
+Partial fills and cancellations with nonzero filled quantity remain BLOCKED.
+Every blocked result records a STALE transition and retains pending actions and
+safety latches. The boundary emits no action intentions.
+
+Mode, quantity, freshness and watermarks are invented declarations. Actual exchange
+schemas, pagination behavior, account authority and atomic snapshot/stream alignment
+require independent verification before integration. This completes the planned
+mock-conformance scope. Remaining work requires external authority, research access,
+funding evidence and separately authorized operational integration.
+
 This procedure exercises invented account and order evidence through the pure `demo_futures.demo_safety_mock` state machine. Its outputs are simulated intentions. Source authority, exchange acknowledgments and operating permissions require independent evidence before future integration.
 
 ## Run the rehearsal
