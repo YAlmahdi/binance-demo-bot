@@ -28,6 +28,7 @@ ENGINEERING_SUITES = (
     "test_v2_research_workflow",
     "test_v2_demo_safety_mock",
     "test_v2_demo_protocol_mock",
+    "test_v2_source_integration",
 )
 
 def guard_for(report, *, event_log=None, allow_report_writes=True):

@@ -1,5 +1,23 @@
 # Futures AI Lab — Project Status
 
+## V2 historical source integration readiness — 2026-11-11
+
+**IMPLEMENTED / TESTED, synthetic-only.** `source_integration.py` provides typed source and slice bindings, metadata-only preauthorization and deterministic supplied-record inputs. It reuses historical scope preflight, strict receipt and prefix checks, independent 48-bar horizon checks and the existing research workflow. Source/revision identity, schema/projection, common approved origin, exact slice grants, declared immutability/isolation, allowed operation and resource bounds must agree before record inspection. Ordered row-version and complete payload commitments bind receipts, funding and paired evidence to replay. Each page is one fully materialized declared slice. Transport pagination and storage access remain future work.
+
+**Runnable fixture.** With `PYTHONPATH=src`, run `python -B -m demo_futures.research_v2.source_integration`. It reports BOUND, 32 scheduled opportunities, six eligible paired IDs and population commitment `ee3e8931a3797f5274956db5532d16e51bcd7ba873214d5a070ea7cc69b75e13`, exactly matching the existing workflow. The fixture also reports missing-authority refusal. Fit stays BLOCKED. A newly pinned missing-receipt fixture preserves all 32 opportunities and refuses dependent causal use. Missing or mutated pages, revisions, receipts, origin, schema, commitments and horizons fail closed. Existing funding conflict and partition checks remain delegated to the unchanged workflow.
+
+**Verification.** Ten focused tests passed per runtime. Final guarded engineering-only no-report runs passed 455/455 unique tests on Python 3.12.14 (1337.261s) and Python 3.14.7 (1261.594s), with zero failures, errors, skips or recorded prohibited events. The isolated final-source snapshot contained 126 verified Python files. Guarded fixture stdout matched SHA-256 `cb7c63437e42e888405eaadce797bb5c70a5da62d121aea8f69f6fe95608ed16` on both runtimes with zero prohibited events. The protected-boundary test verifies refusal before row hashing. Older unpublished status bytes were preserved and excluded from the task snapshot.
+
+| Tested file | Git blob |
+|---|---|
+| `src/demo_futures/research_v2/source_integration.py` | `d5f3686b661c982893ded240a4504248acab4de8` |
+| `tests/test_v2_source_integration.py` | `db43fb11e12db099e4825969b839385c129302ef` |
+| `scripts/verify_research_v2.py` | `a37d8d4ba22be24550f261e7ef0e988c5c99b54d` |
+
+**Limits.** BOUND establishes invented internal consistency. Actual source authority, original receipts, immutable object custody, physical isolation and approved real workload budgets remain unverified. There is no operational historical reader. REQUIRE_VERIFIED_ASOF remains the reference. Approximation and the no-settlement bridge remain inactive. AI/strategy/risk UNCHANGED. Training NOT PERFORMED. Predictive/financial performance NOT EVALUATED. F/C/A/Q PENDING. Five funding findings UNRESOLVED. Aggregate stress BLOCKED. M8 NOT READY. RISK NOT CLEARED.
+
+**One next approval decision.** Approve metadata-only intake of a custodian-supplied immutable BTCUSDT/ETHUSDT snapshot package naming exact objects, scoped rights, origin, receipts, isolation and budgets, to establish a concrete later payload-access request.
+
 ## DEMO protocol conformance and mock exit — 2026-11-11
 
 **IMPLEMENTED / TESTED.** Run `python -B -m demo_futures.demo_protocol_mock` with `PYTHONPATH=src`. The pure invented-protocol boundary validates bounded pagination, token continuity, request/snapshot identity, logical observation cutoffs, sequence coverage, account versions and declared position sides. It reuses the existing reconciliation state machine. The command emits structured PASS/BLOCKED JSON. Complete pagination, consistent side mappings and repeated acknowledgments pass. Missing, duplicate, changed or interrupted pages, stale or reordered events, missing outcomes, contradictory fills and inconsistent order inventories block dependent reconciliation.
